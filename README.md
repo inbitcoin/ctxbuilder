@@ -42,7 +42,6 @@ will print:
 
 ```sh
 { txHex: '01000000017434ffb735c6aef99ef962fc2b0e0c646493492d3b49ad37d9ccc800f2c957b70100000000ffffffff020000000000000000096a074343020522425088c4ad23000000001976a91477c0232b1c5c77f90754c9a400b825547cc30ebd88ac00000000',
-  multisigOutputs: [],
   coloredOutputIndexes: [ 1 ],
   assetId: 'La5YH3tri7HbdzTUfeoiZWm8Dv39jJzgKb53JT' }
 ```
@@ -58,15 +57,9 @@ If `properties` is specified, then the default properties will be overridden.
 ```
 {
   network: String,              // Which blockchain network should be used ('testnet' or 'mainnet', default='mainnet')
-  defaultFee: Number,           // Transaction miner fee, fixed (default=null)
-  defaultFeePerKb: Number,      // Transaction miner fee, per Kb (default=null)
-  mindustvalue: Number,         // Minimum value to put in each output, in satoshi (except for OP_RETURN, default=600)
-  mindustvaluemultisig: Number  // Minimum value to put in Multisig output, in satoshi (default=700)
+  minDustValue: Number,         // Minimum value to put in each output, in satoshi (except for OP_RETURN, default=600)
 }
 ```
-
-**Note:** only one of `defaultFee` and `defaultFeePerKb` can provided.
-If none of them is provided, `fee` will be mandatory in each API call.
 
 ### `builder.buildIssueTransaction(args)`
 
@@ -83,7 +76,7 @@ Build an issuance transaction.
     - `hex`            String, the UTXO's locking script hex.
 - `issueAddress`       String, the Base58Check Bitcoin (or testnet) address which issues the asset, **required**.
 - `amount`             Number, amount of units of the asset to issue, **required**.
-- `fee`                Number, transaction miner fee in satoshi, **required** (unless constructed with one of `defaultFee` and `defaultFeePerKb`.
+- `fee`                Number, transaction miner fee in satoshi, **required**.
 - `divisibility`       Number, how small is the smallest subdivision of the asset, calculated as 10^(-divisibility) (default=0).
 - `lockStatus`         Boolean, is the issued asset locked (can't be reissued) or unlocked (default=true).
 - `transfer`           Object[], array of transfer objects, each consists of:
@@ -91,15 +84,11 @@ Build an issuance transaction.
   - `address`          String, address to send the assets to.
 - `flags`              Object, consists of:
   - `injectPreviousOutput` Boolean, if true each input script will be its previous output script (default=false).
-  - `splitChange`      Boolean, split colored change and finance (BTC) change into 2 different outputs (default=false).
-- `torrentHash`        String, hex string of length 40 (result of metadata's torrent SHA1).
-- `sha2`               String, hex string of length 64 (result of metadata SHA2).
 
 On success, returns JSON which consists of:
 
 - `txHex`                String, the result **unsigned** transaction hex.
 - `assetId`              String, asset ID of the newly created asset.
-- `multisigOutputs`      Number[], Array of indexes of the transaction multisig outputs.
 - `coloredOutputIndexes` Number[], Array of indexes of the transaction colored outputs (carrying assets).
 - `receivingAddresses`   String[], Array of addresses which receive the assets.
 
@@ -126,6 +115,11 @@ On failure, may throw an `Error`.
   - `amount`
   - `assetId`
 - `fee`
+- `financeChangeAddress` DEPRECATED
+- `changeAddress`  String or sync function, use the address as assets change
+- `bitcoinChangeAddress` String or sync function, if defined use the address as bitcoin change
+
+`changeAddress` and `bitcoinChangeAddress` functions will be called at most once
 
 ### `builder.buildIssueTransaction(args)`
 
