@@ -1,0 +1,33 @@
+image: node:11.6.0-stretch
+
+before_script:
+  - node --version
+  - npm --version
+  - yarn --version
+  - whoami
+  - echo "$NPMRC" > ~/.npmrc
+  - yarn install
+
+stages:
+  - test
+  - deploy
+
+tester:
+  stage: test
+  script:
+    - yarn run test
+  only:
+    - master
+    - develop
+    - tags
+
+publish:
+  stage: deploy
+  environment:
+    name: production
+    url: https://browny.inbitcoin.it/-/web/detail/@inbitcoin/ctxbuilder
+  script:
+    - yarn publish
+  when: manual
+  only:
+    - tags

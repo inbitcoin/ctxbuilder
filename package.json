@@ -1,19 +1,22 @@
 {
-  "name": "cc-transaction-builder",
-  "version": "0.1.7",
+  "name": "@inbitcoin/ctxbuilder",
+  "version": "2.2.3",
   "description": "High-level abstraction for building ColoredCoins transactions",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "./node_modules/.bin/mocha"
   },
   "author": "oleiba",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "registry": "https://browny.inbitcoin.it"
+  },
   "dependencies": {
     "bignumber.js": "^4.0.0",
     "bitcoinjs-lib": "^3.0.2",
     "buffer-reverse": "^1.0.1",
     "cc-assetid-encoder": "^0.6.2",
-    "cc-errors": "0.1.0",
+    "@inbitcoin/cerrors": "0.1.4",
     "cc-transaction": "^1.2.1",
     "debug": "^2.6.4",
     "lodash": "^4.17.4",
@@ -21,6 +24,7 @@
   },
   "devDependencies": {
     "clone": "^2.1.1",
+    "mocha": "^6.1.4",
     "standard": "^10.0.2"
   }
 }
