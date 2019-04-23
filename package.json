@@ -1,5 +1,5 @@
 {
-  "name": "cc-transaction-builder",
+  "name": "@inbitcoin/ctxbuilder",
   "version": "0.1.7",
   "description": "High-level abstraction for building ColoredCoins transactions",
   "main": "index.js",
