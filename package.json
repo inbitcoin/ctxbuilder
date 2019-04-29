@@ -8,6 +8,9 @@
   },
   "author": "oleiba",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "registry": "https://browny.inbitcoin.it"
+  },
   "dependencies": {
     "bignumber.js": "^4.0.0",
     "bitcoinjs-lib": "^3.0.2",
