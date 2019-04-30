@@ -4,7 +4,7 @@
   "description": "High-level abstraction for building ColoredCoins transactions",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "./node_modules/.bin/mocha"
   },
   "author": "oleiba",
   "license": "Apache-2.0",
@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "clone": "^2.1.1",
+    "mocha": "^6.1.4",
     "standard": "^10.0.2"
   }
 }

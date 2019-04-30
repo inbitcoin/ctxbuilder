@@ -536,7 +536,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
   var encoder = cc.newTransaction(0x4343, CC_TX_VERSION)
   if (!self._tryAddingInputsForFee(txb, args.utxos, totalInputs, args, satoshiCost)) {
     throw new errors.NotEnoughFundsError({
-      type: 'issuance',
+      type: 'transfer',
       fee: args.fee,
       totalCost: satoshiCost,
       missing: satoshiCost - totalInputs.amount
