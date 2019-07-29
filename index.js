@@ -6,7 +6,7 @@ var cc = require('cc-transaction')
 var findBestMatchByNeededAssets = require('./modules/findBestMatchByNeededAssets')
 var Buffer = require('safe-buffer').Buffer
 var debug = require('debug')('cc-transaction-builder')
-var errors = require('cc-errors')
+var errors = require('@inbitcoin/cerrors')
 var bufferReverse = require('buffer-reverse')
 
 var CC_TX_VERSION = 0x02

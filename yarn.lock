@@ -2,7 +2,7 @@
 # yarn lockfile v1
 
 
-"@inbitcoin/cerrors@0.1.0":
+"@inbitcoin/cerrors@0.1.2":
   version "0.1.2"
   resolved "https://browny.inbitcoin.it/@inbitcoin%2fcerrors/-/cerrors-0.1.2.tgz#2e6b76bf8e1e1396bcd4135a3fa7eac4f68b51a1"
   integrity sha512-N0uue8r6RyGtv4TRp8iRt4U2q4TGH4Yzb0ItBDYF1k1/dxVSCN+uy2QwLYDIWt3k9uBsh774d5QkUH4RDPks4w==
