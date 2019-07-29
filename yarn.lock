@@ -2,6 +2,15 @@
 # yarn lockfile v1
 
 
+"@inbitcoin/cerrors@0.1.0":
+  version "0.1.2"
+  resolved "https://browny.inbitcoin.it/@inbitcoin%2fcerrors/-/cerrors-0.1.2.tgz#2e6b76bf8e1e1396bcd4135a3fa7eac4f68b51a1"
+  integrity sha512-N0uue8r6RyGtv4TRp8iRt4U2q4TGH4Yzb0ItBDYF1k1/dxVSCN+uy2QwLYDIWt3k9uBsh774d5QkUH4RDPks4w==
+  dependencies:
+    debug "^2.2.0"
+    errors "git+https://github.com/inbitcoin/errors-base.git#cef1462"
+    lodash "^4.14.0"
+
 acorn-jsx@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/acorn-jsx/-/acorn-jsx-3.0.1.tgz#afdf9488fb1ecefc8348f6fb22f464e32a58b36b"
@@ -298,15 +307,6 @@ cc-burn-payment-encoder@^1.0.0:
     cc-payment-encoder "^1.0.0"
     clone "^2.0.0"
 
-cc-errors@0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/cc-errors/-/cc-errors-0.1.0.tgz#fb17f7b1f80c761d97006ecf5c56f9d47a7d24a1"
-  integrity sha1-+xf3sfgMdh2XAG7PXFb51Hp9JKE=
-  dependencies:
-    debug "^2.2.0"
-    errors "git+https://github.com/Colored-Coins/errors-base.git"
-    lodash "^4.14.0"
-
 cc-issuance-encoder@^1.1.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/cc-issuance-encoder/-/cc-issuance-encoder-1.1.1.tgz#3e00c70d6176be5d33c83f35324cc4767fb05355"
@@ -595,9 +595,9 @@ error-ex@^1.3.1:
   dependencies:
     is-arrayish "^0.2.1"
 
-"errors@git+https://github.com/Colored-Coins/errors-base.git":
+"errors@git+https://github.com/inbitcoin/errors-base.git#cef1462":
   version "0.3.0"
-  resolved "git+https://github.com/Colored-Coins/errors-base.git#cef1462656f867659a0f33683db9d2d2277220a1"
+  resolved "git+https://github.com/inbitcoin/errors-base.git#cef1462656f867659a0f33683db9d2d2277220a1"
 
 es-abstract@^1.5.1, es-abstract@^1.7.0:
   version "1.13.0"
