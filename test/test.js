@@ -24,8 +24,8 @@ var issueArgs = {
   fee: 5000
 }
 
-describe('builder.buildIssueTransaction(args)', function () {
-  it('throws: Must have "utxos"', function (done) {
+describe('the issue builder', function () {
+  it('args must have utxos field', function (done) {
     var args = clone(issueArgs)
     delete args.utxos
     assert.throws(function () {
@@ -34,7 +34,7 @@ describe('builder.buildIssueTransaction(args)', function () {
     done()
   })
 
-  it('throws: Must have "fee"', function (done) {
+  it('args must have fee field', function (done) {
     var args = clone(issueArgs)
     delete args.fee
     assert.throws(function () {
@@ -43,7 +43,7 @@ describe('builder.buildIssueTransaction(args)', function () {
     done()
   })
 
-  it('throws: Must have "issueAddress"', function (done) {
+  it('args must have issueAddress field', function (done) {
     var args = clone(issueArgs)
     delete args.issueAddress
     assert.throws(function () {
@@ -52,7 +52,7 @@ describe('builder.buildIssueTransaction(args)', function () {
     done()
   })
 
-  it('throws: Must have "amount"', function (done) {
+  it('args must have amount field', function (done) {
     var args = clone(issueArgs)
     delete args.amount
     assert.throws(function () {
@@ -83,7 +83,7 @@ describe('builder.buildIssueTransaction(args)', function () {
     done()
   })
 
-  it('flags.injectPreviousOutput === true: return previous output hex in inputs', function (done) {
+  it('on injectPreviousOutput returns previous output hex in inputs', function (done) {
     var args = clone(issueArgs)
     args.flags = {injectPreviousOutput: true}
     var result = ccb.buildIssueTransaction(args)
@@ -165,8 +165,8 @@ var sendArgs = {
   fee: 5000
 }
 
-describe('builder.buildSendTransaction(args)', function () {
-  it('throws: Must have "utxos"', function (done) {
+describe('the send builder', function () {
+  it('args must have utxos field', function (done) {
     var args = clone(sendArgs)
     delete args.utxos
     assert.throws(function () {
@@ -175,7 +175,7 @@ describe('builder.buildSendTransaction(args)', function () {
     done()
   })
 
-  it('throws: Must have "to"', function (done) {
+  it('args must have to field', function (done) {
     var args = clone(sendArgs)
     delete args.to
     assert.throws(function () {
@@ -184,7 +184,7 @@ describe('builder.buildSendTransaction(args)', function () {
     done()
   })
 
-  it('throws: Must have "fee"', function (done) {
+  it('args must have fee field', function (done) {
     var args = clone(sendArgs)
     delete args.fee
     assert.throws(function () {
@@ -214,7 +214,7 @@ describe('builder.buildSendTransaction(args)', function () {
     done()
   })
 
-  it('returns valid response with default values', function (done) {
+  it('returns valid response with several outputs', function (done) {
     var addresses = [
       'mtr98kany9G1XYNU74pRnfBQmaCg2FZLmc',
       'mtrD2mBMp93bc8SmMa9WK6tteUCtYEuQQz',
@@ -281,7 +281,7 @@ describe('builder.buildSendTransaction(args)', function () {
     done()
   })
 
-  it('flags.injectPreviousOutput === true: return previous output hex in inputs', function (done) {
+  it('on injectPreviousOutput returns previous output hex in inputs', function (done) {
     var args = clone(sendArgs)
     args.flags = {injectPreviousOutput: true}
     var result = ccb.buildSendTransaction(args)
@@ -337,7 +337,7 @@ var burnArgs = {
   fee: 5000
 }
 
-describe('builder.buildBurnTransaction(args)', function () {
+describe('the burn builder', function () {
   it('returns valid response with default values', function (done) {
     var result = ccb.buildBurnTransaction(burnArgs)
     assert(result.txHex)
