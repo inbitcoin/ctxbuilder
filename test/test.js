@@ -168,7 +168,8 @@ describe('the send builder', function () {
   })
 
   it('returns valid response with default values', function (done) {
-    var result = ccb.buildSendTransaction(sendArgs)
+    var args = clone(sendArgs)
+    var result = ccb.buildSendTransaction(args)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
     assert.equal(tx.ins.length, 1)

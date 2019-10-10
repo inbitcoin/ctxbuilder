@@ -30,6 +30,12 @@ var ColoredCoinsBuilder = function (properties) {
   this.mindustvalue = parseInt(properties.mindustvalue) || 600
 }
 
+function checkNotSupportedArgs(args) {
+  if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.from || args.to && args.to.pubKeys && args.to.m) {
+    throw new Error('Some args are not supported anymore')
+  }
+}
+
 ColoredCoinsBuilder.prototype.buildIssueTransaction = function (args) {
   var self = this
   if (!args.utxos) {
@@ -44,6 +50,7 @@ ColoredCoinsBuilder.prototype.buildIssueTransaction = function (args) {
   if (!args.amount) {
     throw new Error('Must have "amount"')
   }
+  checkNotSupportedArgs(args)
 
   if (args.fee) {
     args.fee = parseInt(args.fee)
@@ -422,9 +429,7 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = function (args) {
   if (!args.fee && !self.defaultFee) {
     throw new Error('Must have "fee"')
   }
-  if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.to && args.to.pubKeys && args.to.m) {
-    throw new Error('Some args are not supported anymore')
-  }
+  checkNotSupportedArgs(args)
 
   if (args.fee) {
     args.fee = parseInt(args.fee)
@@ -653,6 +658,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
 ColoredCoinsBuilder.prototype.buildBurnTransaction = function (args) {
   var self = this
   args = args || {}
+  checkNotSupportedArgs(args)
   var to = args.transfer || []
   var burn = args.burn || []
   burn.forEach(function (burnItem) { burnItem.burn = true })
