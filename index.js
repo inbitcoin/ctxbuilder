@@ -17,6 +17,9 @@ var ColoredCoinsBuilder = function (properties) {
   if (typeof properties.network !== 'undefined' && properties.network !== 'testnet' && properties.network !== 'mainnet') {
     throw new Error('"network" must be either "testnet" or "mainnet"')
   }
+  if (properties.mindustvaluemultisig) {
+    throw new Error('Some properties are not supported anymore')
+  }
   this.network = properties.network || 'mainnet' // 'testnet' or 'mainnet'
 
   if (properties.defaultFee) {
@@ -25,8 +28,6 @@ var ColoredCoinsBuilder = function (properties) {
   this.defaultFeePerKb = parseInt(properties.defaultFeePerKb) || 25000
 
   this.mindustvalue = parseInt(properties.mindustvalue) || 600
-  this.mindustvaluemultisig = parseInt(properties.mindustvaluemultisig) || 700
-  this.writemultisig = properties.writemultisig || true
 }
 
 ColoredCoinsBuilder.prototype.buildIssueTransaction = function (args) {
@@ -146,12 +147,6 @@ ColoredCoinsBuilder.prototype._getIssuanceCost = function (args) {
       totalCost += self.mindustvalue
     })
   }
-
-  // TODO: calculate multisig only if actually needed
-  if (args.metadata) {
-    totalCost += self.writemultisig ? self.mindustvaluemultisig : 0
-  }
-
   // change
   totalCost += self.mindustvalue
 
@@ -213,9 +208,6 @@ ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
   encoder.setLockStatus(lockStatus)
   encoder.setAmount(args.amount, args.divisibility)
   encoder.setAggregationPolicy(args.aggregationPolicy)
-  if (args.torrentHash) {
-    encoder.setHash(args.torrentHash, args.sha2)
-  }
 
   if (args.transfer) {
     args.transfer.forEach(function (transferobj, i) {
@@ -307,7 +299,7 @@ ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
   txb.addOutput(args.issueAddress, lastOutputValue || args.change)
   debug('txHex ', txb.tx.toHex())
 
-  return { txHex: txb.tx.toHex(), multisigOutputs: reedemScripts, coloredOutputIndexes: _.uniq(coloredOutputIndexes) }
+  return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniq(coloredOutputIndexes) }
 }
 
 ColoredCoinsBuilder.prototype._generateMultisigAddress = function (pubKeys, m) {
@@ -430,6 +422,9 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = function (args) {
   if (!args.fee && !self.defaultFee) {
     throw new Error('Must have "fee"')
   }
+  if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.to && args.to.pubKeys && args.to.m) {
+    throw new Error('Some args are not supported anymore')
+  }
 
   if (args.fee) {
     args.fee = parseInt(args.fee)
@@ -449,7 +444,6 @@ ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
       fee += self.mindustvalue
     })
   }
-  if (args.rules || args.metadata) { fee += self.writemultisig ? self.mindustvaluemultisig : 0 }
 
   fee += self.mindustvalue
 
@@ -498,9 +492,6 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
     assetList[to.assetId].amount += to.amount
     if (to.burn) {
       assetList[to.assetId].addresses.push({ address: 'burn', amount: to.amount })
-    } else if (!to.address && to.pubKeys && to.m) { // generate a multisig address, remember to return the redeem scripts
-      var multisig = self._generateMultisigAddress(to.pubKeys, to.m)
-      assetList[to.assetId].addresses.push({ address: multisig.address, amount: to.amount, reedemScript: multisig.reedemScript })
     } else {
       assetList[to.assetId].addresses.push({ address: to.address, amount: to.amount })
     }
@@ -597,10 +588,6 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
     debug('done adding colored outputs')
   }
   debug('before using encoder')
-    // add metadata if we have any
-  if (args.torrentHash && args.sha2 && self.writemultisig) {
-    encoder.setHash(args.torrentHash, args.sha2)
-  }
   var buffer = encoder.encode()
   if (buffer.leftover && buffer.leftover.length > 0) {
     encoder.shiftOutputs()
@@ -660,7 +647,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
   }
   txb.addOutput(changeAddress, lastOutputValue)
   debug('success')
-  return { txHex: txb.tx.toHex(), metadataSha1: args.torrentHash, multisigOutputs: reedemScripts, coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
+  return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
 }
 
 ColoredCoinsBuilder.prototype.buildBurnTransaction = function (args) {

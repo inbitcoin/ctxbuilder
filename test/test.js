@@ -105,32 +105,6 @@ describe('the issue builder', function () {
     assert.deepEqual(result.coloredOutputIndexes, [1])
     done()
   })
-
-  it('should encode torrentHash and sha2', function (done) {
-    var args = clone(issueArgs)
-    args.sha2 = '59040d5c3bc91b5e28e014541363c0f64d9a2429541fe6cf1c568c63c85fbb20'
-    args.torrentHash = '02fcc3d843eaba4d278ed107c0c2b56a146f66b8'
-    var result = ccb.buildIssueTransaction(args)
-    var tx = Transaction.fromHex(result.txHex)
-    var opReturnScriptBuffer = script.decompile(tx.outs[0].script)[1]
-    var ccTransaction = CC.fromHex(opReturnScriptBuffer)
-    assert.equal(ccTransaction.sha2.toString('hex'), args.sha2)
-    assert.equal(ccTransaction.torrentHash.toString('hex'), args.torrentHash)
-    done()
-  })
-
-  it('should encode torrentHash and sha2', function (done) {
-    var args = clone(issueArgs)
-    args.sha2 = '59040d5c3bc91b5e28e014541363c0f64d9a2429541fe6cf1c568c63c85fbb20'
-    args.torrentHash = '02fcc3d843eaba4d278ed107c0c2b56a146f66b8'
-    var result = ccb.buildIssueTransaction(args)
-    var tx = Transaction.fromHex(result.txHex)
-    var opReturnScriptBuffer = script.decompile(tx.outs[0].script)[1]
-    var ccTransaction = CC.fromHex(opReturnScriptBuffer)
-    assert.equal(ccTransaction.sha2.toString('hex'), args.sha2)
-    assert.equal(ccTransaction.torrentHash.toString('hex'), args.torrentHash)
-    done()
-  })
 })
 
 var sendArgs = {
@@ -256,28 +230,11 @@ describe('the send builder', function () {
     for (var address of addresses) {
       args.to.push({ address: address, amount: 1, assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j' })
     }
-    args.sha2 = '59040d5c3bc91b5e28e014541363c0f64d9a2429541fe6cf1c568c63c85fbb20'
-    args.torrentHash = '02fcc3d843eaba4d278ed107c0c2b56a146f66b8'
     var result = ccb.buildSendTransaction(args)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
     var opReturnScriptBuffer = script.decompile(tx.outs[tx.outs.length - 3].script)[1]
     var ccTransaction = CC.fromHex(opReturnScriptBuffer)
-    assert.equal(ccTransaction.multiSig[0].hashType, 'sha2')
-    assert.equal(ccTransaction.multiSig[1].hashType, 'torrentHash')
-    done()
-  })
-
-  it('should encode torrentHash and sha2', function (done) {
-    var args = clone(sendArgs)
-    args.sha2 = '59040d5c3bc91b5e28e014541363c0f64d9a2429541fe6cf1c568c63c85fbb20'
-    args.torrentHash = '02fcc3d843eaba4d278ed107c0c2b56a146f66b8'
-    var result = ccb.buildSendTransaction(args)
-    var tx = Transaction.fromHex(result.txHex)
-    var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
-    var ccTransaction = CC.fromHex(opReturnScriptBuffer)
-    assert.equal(ccTransaction.sha2.toString('hex'), args.sha2)
-    assert.equal(ccTransaction.torrentHash.toString('hex'), args.torrentHash)
     done()
   })
 
