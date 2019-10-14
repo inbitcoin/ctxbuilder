@@ -30,9 +30,15 @@ var ColoredCoinsBuilder = function (properties) {
   this.mindustvalue = parseInt(properties.mindustvalue) || 600
 }
 
-function checkNotSupportedArgs(args) {
-  if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.from || args.to && args.to.pubKeys && args.to.m) {
+function checkNotSupportedArgs(args, builder) {
+  function error() {
     throw new Error('Some args are not supported anymore')
+  }
+  if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.from || args.to && args.to.pubKeys && args.to.m) {
+    error()
+  }
+  if (builder === "send" && args.financeChangeAddress) {
+    error()
   }
 }
 
@@ -426,10 +432,13 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = function (args) {
   if (!args.to) {
     throw new Error('Must have "to"')
   }
+  if (!args.changeAddress) {
+    throw new Error('Must have "changeAddress"')
+  }
   if (!args.fee && !self.defaultFee) {
     throw new Error('Must have "fee"')
   }
-  checkNotSupportedArgs(args)
+  checkNotSupportedArgs(args, 'send')
 
   if (args.fee) {
     args.fee = parseInt(args.fee)
@@ -607,7 +616,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
     }
   }
 
-   // add array of colored ouput indexes
+  // add array of colored ouput indexes
   encoder.payments.forEach(function (payment) {
     if (typeof payment.output !== 'undefined') coloredOutputIndexes.push(payment.output)
   })
@@ -624,9 +633,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
     return assetList[assetId].change > 0
   })
 
-  var splitChange = !(args.financeChangeAddress == false)
-  var changeAddress = args.financeChangeAddress || (Array.isArray(args.from) ? args.from[0] : args.from)
-
+  var splitChange = Boolean(args.bitcoinChangeAddress)
   var numOfChanges = (splitChange && coloredChange && lastOutputValue >= 2 * self.mindustvalue) ? 2 : 1
 
   if (lastOutputValue < numOfChanges * self.mindustvalue) {
@@ -643,14 +650,21 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
     lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
   }
 
+  var btcCangeValue = lastOutputValue
   if (numOfChanges === 2) {
-    txb.addOutput(changeAddress, lastOutputValue - self.mindustvalue)
+    btcCangeValue = lastOutputValue - self.mindustvalue
     lastOutputValue = self.mindustvalue
+    // TODO: test btcCangeValue > mindustvalue
+  }
+
+  if (numOfChanges === 2 || !coloredChange) {
+    // Add btc
+    txb.addOutput(args.bitcoinChangeAddress, btcCangeValue)
   }
   if (coloredChange) {
     coloredOutputIndexes.push(txb.tx.outs.length)
+    txb.addOutput(args.changeAddress, lastOutputValue)
   }
-  txb.addOutput(changeAddress, lastOutputValue)
   debug('success')
   return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
 }

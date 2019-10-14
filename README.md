@@ -89,7 +89,6 @@ Build an issuance transaction.
   - `address`          String, address to send the assets to.
 - `flags`              Object, consists of:
   - `injectPreviousOutput` Boolean, if true each input script will be its previous output script (default=false).
-  - `splitChange`      Boolean, split colored change and finance (BTC) change into 2 different outputs (default=false).
 
 On success, returns JSON which consists of:
 
@@ -121,6 +120,9 @@ On failure, may throw an `Error`.
   - `amount`
   - `assetId`
 - `fee`
+- `financeChangeAddress` DEPRECATED
+- `changeAddress`  String or sync function, use the address as assets change
+- `bitcoinChangeAddress` String or sync function, if defined use the address as bitcoin change
 
 ### `builder.buildIssueTransaction(args)`
 

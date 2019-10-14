@@ -9,6 +9,11 @@ var script = bitcoinjs.script
 var CC = require('cc-transaction')
 var _ = require('lodash')
 
+/* Tests utils */
+function outputScriptToAddress(script) {
+  return bitcoinjs.address.fromOutputScript(script, bitcoinjs.networks.testnet)
+}
+
 var issueArgs = {
   utxos: [{
     txid: 'b757c9f200c8ccd937ad493b2d499364640c0e2bfc62f99ef9aec635b7ff3474',
@@ -136,6 +141,7 @@ var sendArgs = {
     }
   ],
   to: [{ address: 'mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY', amount: 20, assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j' }],
+  changeAddress: 'mfuVBQVHpPGiVrAB6MoNaPjiiY1va7f4bc',
   fee: 5000
 }
 
@@ -167,14 +173,23 @@ describe('the send builder', function () {
     done()
   })
 
+  it('args must have changeAddress field', function (done) {
+    var args = clone(sendArgs)
+    delete args.changeAddress
+    assert.throws(function () {
+      ccb.buildSendTransaction(args)
+    }, /Must have "changeAddress"/)
+    done()
+  })
+
   it('returns valid response with default values', function (done) {
     var args = clone(sendArgs)
     var result = ccb.buildSendTransaction(args)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
     assert.equal(tx.ins.length, 1)
-    assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
-    assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
+    assert.deepEqual(result.coloredOutputIndexes, [0, 2])
     var sumValueInputs = sendArgs.utxos[0].value
     var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
     assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
@@ -233,9 +248,7 @@ describe('the send builder', function () {
     }
     var result = ccb.buildSendTransaction(args)
     assert(result.txHex)
-    var tx = Transaction.fromHex(result.txHex)
-    var opReturnScriptBuffer = script.decompile(tx.outs[tx.outs.length - 3].script)[1]
-    var ccTransaction = CC.fromHex(opReturnScriptBuffer)
+    Transaction.fromHex(result.txHex)
     done()
   })
 
@@ -252,13 +265,59 @@ describe('the send builder', function () {
 
   it('should not split change', function (done) {
     var args = clone(sendArgs)
-    args.financeChangeAddress = false
     var result = ccb.buildSendTransaction(args)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
     assert.equal(tx.ins.length, 1)
     assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + 1 change
     assert.deepEqual(result.coloredOutputIndexes, [0, 2])
+    assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress)
+    done()
+  })
+
+  it('should split change', function (done) {
+    var args = clone(sendArgs)
+    var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+    args.bitcoinChangeAddress = btcAddr
+    var result = ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+    assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+    assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
+    assert.equal(outputScriptToAddress(tx.outs[3].script), sendArgs.changeAddress, 'assets change')
+    done()
+  })
+
+  it('should have only asset change', function (done) {
+    var args = clone(sendArgs)
+    // Spend all in fees
+    args.fee = args.utxos[0].value - 654 * 2
+    var result = ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + assets change
+    assert.deepEqual(result.coloredOutputIndexes, [0, 2])
+    assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress, 'assets change')
+    1/0
+    done()
+  })
+
+  it('should have only bitcoin change', function (done) {
+    var args = clone(sendArgs)
+    var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+    args.bitcoinChangeAddress = btcAddr
+    // Send a whole utxo, so asset change can be avoided
+    args.to[0].amount = sendArgs.utxos[0].assets[0].amount
+    var result = ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + bitcoin change
+    assert.deepEqual(result.coloredOutputIndexes, [0])
+    assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
     done()
   })
 })
@@ -292,6 +351,7 @@ var burnArgs = {
     }
   ],
   burn: [{ amount: 20, assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j' }],
+  changeAddress: 'mfuVBQVHpPGiVrAB6MoNaPjiiY1va7f4bc',
   fee: 5000
 }
 
@@ -301,8 +361,8 @@ describe('the burn builder', function () {
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
     assert.equal(tx.ins.length, 1)
-    assert.equal(tx.outs.length, 3) // OP_RETURN + 2 changes
-    assert.deepEqual(result.coloredOutputIndexes, [2])
+    assert.equal(tx.outs.length, 2) // OP_RETURN + change
+    assert.deepEqual(result.coloredOutputIndexes, [1])
     var sumValueInputs = sendArgs.utxos[0].value
     var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
     assert.equal(sumValueInputs - sumValueOutputs, burnArgs.fee)
