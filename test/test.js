@@ -1,6 +1,7 @@
 /* eslint-env mocha */
+var softMaxWalletUtxos = 3
 var ColoredCoinsBuilder = require('..')
-var ccb = new ColoredCoinsBuilder({network: 'testnet'})
+var ccb = new ColoredCoinsBuilder({network: 'testnet', softMaxUtxos: softMaxWalletUtxos})
 var assert = require('assert')
 var clone = require('clone')
 var bitcoinjs = require('bitcoinjs-lib')
@@ -260,6 +261,116 @@ describe('the send builder', function () {
     assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + 1 change
     assert.deepEqual(result.coloredOutputIndexes, [0, 2])
     done()
+  })
+
+  describe('coin selection', function() {
+
+    function addUtxos(args, n) {
+      for (var i=0; i<n; i++) {
+        args.utxos.push(clone(args.utxos[0]))
+      }
+    }
+
+    function expectedNumberOfUtxos(utxos, softMaxUtxos) {
+      var overSize = utxos.length - softMaxUtxos
+      if (overSize > 1) {
+        return Math.floor(Math.log2(overSize))
+      } else {
+        return 1
+      }
+    }
+
+    it('should work with small utxo set', function(done) {
+      // small means utxos.length <= softMaxUtxos
+      var args = clone(sendArgs)
+      var result = ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, expectedNumberOfUtxos(args.utxos, softMaxWalletUtxos))
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      var sumValueInputs = sendArgs.utxos[0].value
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
+      var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
+      var ccTransaction = CC.fromHex(opReturnScriptBuffer)
+      assert.equal(ccTransaction.type, 'transfer')
+      assert.equal(ccTransaction.payments[0].range, false)
+      assert.equal(ccTransaction.payments[0].output, 0)
+      assert.equal(ccTransaction.payments[0].input, 0)
+      assert.equal(ccTransaction.payments[0].percent, false)
+      assert.equal(ccTransaction.payments[0].amount, sendArgs.to[0].amount)
+      done()
+    })
+    it('should work with a larger utxo set', function(done) {
+      // larger means utxos.length === softMaxUtxos
+      var args = clone(sendArgs)
+      addUtxos(args, softMaxWalletUtxos - 1)
+      var result = ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, expectedNumberOfUtxos(args.utxos, softMaxWalletUtxos))
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      var sumValueInputs = sendArgs.utxos[0].value
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
+      var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
+      var ccTransaction = CC.fromHex(opReturnScriptBuffer)
+      assert.equal(ccTransaction.type, 'transfer')
+      assert.equal(ccTransaction.payments[0].range, false)
+      assert.equal(ccTransaction.payments[0].output, 0)
+      assert.equal(ccTransaction.payments[0].input, 0)
+      assert.equal(ccTransaction.payments[0].percent, false)
+      assert.equal(ccTransaction.payments[0].amount, sendArgs.to[0].amount)
+      done()
+    })
+    it('should work with 50 utxos', function(done) {
+      // larger means utxos.length === softMaxUtxos
+      var args = clone(sendArgs)
+      addUtxos(args, 50 - 1)
+      var result = ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, expectedNumberOfUtxos(args.utxos, softMaxWalletUtxos))
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      var sumValueInputs = sendArgs.utxos[0].value
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
+      var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
+      var ccTransaction = CC.fromHex(opReturnScriptBuffer)
+      assert.equal(ccTransaction.type, 'transfer')
+      assert.equal(ccTransaction.payments[0].range, false)
+      assert.equal(ccTransaction.payments[0].output, 0)
+      assert.equal(ccTransaction.payments[0].input, 0)
+      assert.equal(ccTransaction.payments[0].percent, false)
+      assert.equal(ccTransaction.payments[0].amount, sendArgs.to[0].amount)
+      done()
+    })
+    it('should work with 500 utxos', function(done) {
+      // larger means utxos.length === softMaxUtxos
+      var args = clone(sendArgs)
+      addUtxos(args, 500 - 1)
+      var result = ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, expectedNumberOfUtxos(args.utxos, softMaxWalletUtxos))
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      var sumValueInputs = sendArgs.utxos[0].value
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
+      var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
+      var ccTransaction = CC.fromHex(opReturnScriptBuffer)
+      assert.equal(ccTransaction.type, 'transfer')
+      assert.equal(ccTransaction.payments[0].range, false)
+      assert.equal(ccTransaction.payments[0].output, 0)
+      assert.equal(ccTransaction.payments[0].input, 0)
+      assert.equal(ccTransaction.payments[0].percent, false)
+      assert.equal(ccTransaction.payments[0].amount, sendArgs.to[0].amount)
+      done()
+    })
   })
 })
 
