@@ -522,7 +522,9 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
           throw new Error('Output ' + utxo.txid + ':' + utxo.index + ' is already spent!')
         }
       })
-      if (!findBestMatchByNeededAssets(assetUtxos, assetList, key, txb, totalInputs, args)) { throw new Error('Not enough units of asset ' + key + ' to cover transfer transaction') }
+      if (!findBestMatchByNeededAssets(assetUtxos, assetList, key, txb, totalInputs, args)) {
+        throw new Error('Not enough units of asset ' + key + ' to cover transfer transaction')
+      }
     } else {
       debug('no utxo list')
       throw new Error('No output with the requested asset: ' + asset)
