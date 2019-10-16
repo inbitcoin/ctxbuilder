@@ -341,7 +341,8 @@ describe('the send builder', function () {
     }
 
     function test(args) {
-      args.to[0].amount = 1020
+      var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      args.bitcoinChangeAddress = btcAddr
       var result = ccb.buildSendTransaction(args)
       assert(result.txHex)
       var tx = Transaction.fromHex(result.txHex)
@@ -370,41 +371,28 @@ describe('the send builder', function () {
     it('should work with small utxo set', function(done) {
       // small means utxos.length <= softMaxUtxos
       var args = clone(sendArgs)
-      var result = ccb.buildSendTransaction(args)
-      assert(result.txHex)
-      var tx = Transaction.fromHex(result.txHex)
-      assert.equal(tx.ins.length, expectedNumberOfUtxos(args.utxos, softMaxWalletUtxos))
-      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
-      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
-      var sumValueInputs = sendArgs.utxos[0].value
-      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
-      assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
-      var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
-      var ccTransaction = CC.fromHex(opReturnScriptBuffer)
-      assert.equal(ccTransaction.type, 'transfer')
-      assert.equal(ccTransaction.payments[0].range, false)
-      assert.equal(ccTransaction.payments[0].output, 0)
-      assert.equal(ccTransaction.payments[0].input, 0)
-      assert.equal(ccTransaction.payments[0].percent, false)
-      assert.equal(ccTransaction.payments[0].amount, sendArgs.to[0].amount)
+      test(args)
       done()
     })
     it('should work with a larger utxo set', function(done) {
       // larger means utxos.length === softMaxUtxos
       var args = clone(sendArgs)
       addUtxos(args, softMaxWalletUtxos - 1)
+      args.to[0].amount = 1020
       test(args)
       done()
     })
     it('should work with 50 utxos', function(done) {
       var args = clone(sendArgs)
       addUtxos(args, 50 - 1)
+      args.to[0].amount = 1020
       test(args)
       done()
     })
     it('should work with 500 utxos', function(done) {
       var args = clone(sendArgs)
       addUtxos(args, 500 - 1)
+      args.to[0].amount = 1020
       test(args)
       done()
     })
