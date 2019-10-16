@@ -293,6 +293,8 @@ describe('the send builder', function () {
 
   it('should have only asset change', function (done) {
     var args = clone(sendArgs)
+    var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+    args.bitcoinChangeAddress = btcAddr
     // Spend all in fees
     args.fee = args.utxos[0].value - 654 * 2
     var result = ccb.buildSendTransaction(args)
@@ -302,7 +304,6 @@ describe('the send builder', function () {
     assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + assets change
     assert.deepEqual(result.coloredOutputIndexes, [0, 2])
     assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress, 'assets change')
-    1/0
     done()
   })
 
