@@ -28,11 +28,27 @@ var ColoredCoinsBuilder = function (properties) {
   this.defaultFeePerKb = parseInt(properties.defaultFeePerKb) || 25000
 
   this.mindustvalue = parseInt(properties.mindustvalue) || 600
+
+  this.softMaxUtxos = parseInt(properties.softMaxUtxos) || 666
 }
 
 function checkNotSupportedArgs(args) {
   if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.from || args.to && args.to.pubKeys && args.to.m) {
     throw new Error('Some args are not supported anymore')
+  }
+}
+
+/**
+ * Compute the minumum number of inputs for the next transaction,
+ * in order to limit the neverending growth of the utxo set
+ */
+ColoredCoinsBuilder.prototype.getMinInputs = function (utxos) {
+  var self = this
+
+  if (utxos.length <= self.softMaxUtxos) {
+    return 0
+  } else {
+    return Math.floor(Math.log2(utxos.length - self.softMaxUtxos))
   }
 }
 
@@ -522,6 +538,8 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
           throw new Error('Output ' + utxo.txid + ':' + utxo.index + ' is already spent!')
         }
       })
+      debug('set the minimum number of inputs of asset ' + key)
+      args.minInputs = self.getMinInputs(assetUtxos)
       if (!findBestMatchByNeededAssets(assetUtxos, assetList, key, txb, totalInputs, args)) {
         throw new Error('Not enough units of asset ' + key + ' to cover transfer transaction')
       }

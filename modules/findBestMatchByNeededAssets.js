@@ -6,8 +6,7 @@ var debug = require('debug')('findBestMatchByNeededAssets')
 var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputvalues, metadata) {
   debug('findBestMatchByNeededAssets: start for ' + key)
 
-  var requiredInputsLen = 5  // This will be a parameter/arg
-
+  var minInputs = metadata.minInputs || 0
   /*
    assetList
    It describes required assets. Example:
@@ -58,7 +57,7 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
     if (!selectedUtxos.some(function(s) { return s.txid === u.txid && s.index === u.index })) {
       selectedUtxos.push(u)
     }
-    return selectedUtxos.length === requiredInputsLen
+    return selectedUtxos.length >= minInputs
   })
 
   debug('selectedUtxos = ', _.map(selectedUtxos, function (utxo) { return { utxo: (utxo.txid + ':' + utxo.index), amount: getUtxoAssetAmount(utxo, key) } }))
@@ -97,8 +96,8 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
           debug('inputIndex = ' + inputIndex)
           debug('utxoIndex = ' + utxoIndex)
           debug('inputIndexInAsset = ' + inputIndexInAsset)
-          debug('if conditions', assetList[asset.assetId].amount, asset.amount, utxoIndex+1, requiredInputsLen)
-          if (assetList[asset.assetId].amount <= asset.amount && utxoIndex+1 >= requiredInputsLen) {
+          debug('if conditions', assetList[asset.assetId].amount, asset.amount, utxoIndex+1, minInputs)
+          if (assetList[asset.assetId].amount <= asset.amount && utxoIndex+1 >= minInputs) {
             var totalamount = asset.amount
             if (aggregationPolicy === 'aggregatable' && lastAssetId === asset.assetId && assetList[asset.assetId].inputs.length) {
               debug('#1 assetList[' + asset.assetId + '].inputs[' + (inputIndexInAsset - 1) + '].amount += ' + asset.amount)
