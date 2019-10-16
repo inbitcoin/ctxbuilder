@@ -398,6 +398,34 @@ describe('the send builder', function () {
       done()
     })
   })
+
+  it('change address could be a function', function(done) {
+    var args = clone(sendArgs)
+    // @ts-ignore
+    args.changeAddress = () => sendArgs.changeAddress
+    var result = ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
+    assert.deepEqual(result.coloredOutputIndexes, [0, 2])
+    assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress, 'assets change')
+    done()
+  })
+  it('bitcoin change address could be a function', function(done) {
+    var args = clone(sendArgs)
+    var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+    args.bitcoinChangeAddress = () => btcAddr
+    var result = ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + change
+    assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+    assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
+    assert.equal(outputScriptToAddress(tx.outs[3].script), sendArgs.changeAddress, 'assets change')
+    done()
+  })
 })
 
 var burnArgs = {

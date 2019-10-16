@@ -213,6 +213,9 @@ ColoredCoinsBuilder.prototype._encodeAssetId = function (reissueable, txid, nvou
   return assetId
 }
 
+/**
+ * This method is called only by build issue
+ */
 ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
   var self = this
   var addMultisig = false
@@ -679,11 +682,19 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
 
   if (numOfChanges === 2 || !coloredChange) {
     // Add btc
-    txb.addOutput(args.bitcoinChangeAddress, btcCangeValue)
+    if (typeof args.bitcoinChangeAddress === 'function') {
+      txb.addOutput(args.bitcoinChangeAddress(), btcCangeValue)
+    } else {
+      txb.addOutput(args.bitcoinChangeAddress, btcCangeValue)
+    }
   }
   if (coloredChange) {
     coloredOutputIndexes.push(txb.tx.outs.length)
-    txb.addOutput(args.changeAddress, lastOutputValue)
+    if (typeof args.changeAddress === 'function') {
+      txb.addOutput(args.changeAddress(), lastOutputValue)
+    } else {
+      txb.addOutput(args.changeAddress, lastOutputValue)
+    }
   }
   debug('success')
   return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
