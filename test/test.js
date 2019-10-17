@@ -291,6 +291,19 @@ describe('the send builder', function () {
     done()
   })
 
+  it('should accept placeholder changes addresses', function (done) {
+    var args = clone(sendArgs)
+    args.changeAddress = "placeholder"
+    args.bitcoinChangeAddress = "placeholder"
+    var result = ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+    assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+    done()
+  })
+
   it('should have only asset change', function (done) {
     var args = clone(sendArgs)
     var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'

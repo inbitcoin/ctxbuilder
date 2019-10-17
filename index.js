@@ -58,6 +58,34 @@ ColoredCoinsBuilder.prototype.getMinInputs = function (utxos) {
   }
 }
 
+ColoredCoinsBuilder.prototype.outputScriptToAddress = function (script) {
+  var self = this
+
+  var network
+  if (self.network == 'mainnet') {
+    network = bitcoinjs.networks.bitcoin
+  } else {
+    network = bitcoinjs.networks.testnet
+  }
+  return bitcoinjs.address.fromOutputScript(script, network)
+}
+
+ColoredCoinsBuilder.prototype.getPlaceholderAddress = function (version) {
+  var self = this
+
+  var hexScript
+  if (version === 1) {
+    hexScript = '76a914010000000000000000000000000000000000000088ac'
+  } else if (version === 2) {
+    hexScript = '76a914020000000000000000000000000000000000000088ac'
+  } else {
+    throw new Error('version unsupported')
+  }
+  
+  const bufferScript = Buffer.from(hexScript, 'hex')
+  return self.outputScriptToAddress(bufferScript)
+}
+
 ColoredCoinsBuilder.prototype.buildIssueTransaction = function (args) {
   var self = this
   if (!args.utxos) {
@@ -685,6 +713,9 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
     if (typeof args.bitcoinChangeAddress === 'function') {
       txb.addOutput(args.bitcoinChangeAddress(), btcCangeValue)
     } else {
+      if (args.bitcoinChangeAddress == 'placeholder') {
+        args.bitcoinChangeAddress = self.getPlaceholderAddress(1)
+      }
       txb.addOutput(args.bitcoinChangeAddress, btcCangeValue)
     }
   }
@@ -693,6 +724,9 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
     if (typeof args.changeAddress === 'function') {
       txb.addOutput(args.changeAddress(), lastOutputValue)
     } else {
+      if (args.changeAddress == 'placeholder') {
+        args.changeAddress = self.getPlaceholderAddress(2)
+      }
       txb.addOutput(args.changeAddress, lastOutputValue)
     }
   }

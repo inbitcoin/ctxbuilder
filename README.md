@@ -124,6 +124,8 @@ On failure, may throw an `Error`.
 - `changeAddress`  String or sync function, use the address as assets change
 - `bitcoinChangeAddress` String or sync function, if defined use the address as bitcoin change
 
+`changeAddress` and `bitcoinChangeAddress` functions will be called at most once
+
 ### `builder.buildIssueTransaction(args)`
 
 `args` is a JSON of the format:
