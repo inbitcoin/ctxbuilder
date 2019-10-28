@@ -86,7 +86,7 @@ ColoredCoinsBuilder.prototype.getPlaceholderAddress = function (version) {
   return self.outputScriptToAddress(bufferScript)
 }
 
-ColoredCoinsBuilder.prototype.buildIssueTransaction = function (args) {
+ColoredCoinsBuilder.prototype.buildIssueTransaction = async function (args) {
   var self = this
   if (!args.utxos) {
     throw new Error('Must have "utxos"')
@@ -471,7 +471,7 @@ ColoredCoinsBuilder.prototype._tryAddingInputsForFee = function (txb, utxos, tot
   return true
 }
 
-ColoredCoinsBuilder.prototype.buildSendTransaction = function (args) {
+ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
   var self = this
   if (!args.utxos) {
     throw new Error('Must have "utxos"')
@@ -493,7 +493,7 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = function (args) {
 
   var txb = new bitcoinjs.TransactionBuilder(self.network === 'testnet' ? bitcoinjs.networks.testnet : bitcoinjs.networks.bitcoin)
 
-  return self._addInputsForSendTransaction(txb, args)
+  return await self._addInputsForSendTransaction(txb, args)
 }
 
 ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
@@ -527,7 +527,7 @@ ColoredCoinsBuilder.prototype._getChangeAmount = function (tx, fee, totalInputVa
   return (totalInputValue.amount - (allOutputValues + fee))
 }
 
-ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args) {
+ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb, args) {
   var self = this
   var satoshiCost = self._computeCost(true, args)
   var totalInputs = { amount: 0 }
@@ -711,7 +711,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
   if (numOfChanges === 2 || !coloredChange) {
     // Add btc
     if (typeof args.bitcoinChangeAddress === 'function') {
-      txb.addOutput(args.bitcoinChangeAddress(), btcCangeValue)
+      txb.addOutput(await args.bitcoinChangeAddress(), btcCangeValue)
     } else {
       if (args.bitcoinChangeAddress == 'placeholder') {
         args.bitcoinChangeAddress = self.getPlaceholderAddress(1)
@@ -722,7 +722,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
   if (coloredChange) {
     coloredOutputIndexes.push(txb.tx.outs.length)
     if (typeof args.changeAddress === 'function') {
-      txb.addOutput(args.changeAddress(), lastOutputValue)
+      txb.addOutput(await args.changeAddress(), lastOutputValue)
     } else {
       if (args.changeAddress == 'placeholder') {
         args.changeAddress = self.getPlaceholderAddress(2)
@@ -734,7 +734,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = function (txb, args
   return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
 }
 
-ColoredCoinsBuilder.prototype.buildBurnTransaction = function (args) {
+ColoredCoinsBuilder.prototype.buildBurnTransaction = async function (args) {
   var self = this
   args = args || {}
   checkNotSupportedArgs(args)
@@ -744,7 +744,7 @@ ColoredCoinsBuilder.prototype.buildBurnTransaction = function (args) {
   to.push.apply(to, burn)
   delete args.transfer
   args.to = to
-  return self.buildSendTransaction(args)
+  return await self.buildSendTransaction(args)
 }
 
 module.exports = ColoredCoinsBuilder
