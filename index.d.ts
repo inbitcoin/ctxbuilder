@@ -1,6 +1,12 @@
 declare module '@inbitcoin/ctxbuilder' {
   class ColoredCoinsBuilder {
-    constructor(param?: { network: "mainnet" | "testnet" | "regtest"; minDustValue?: number; softMaxUtxos?: number; })
+    constructor(properties: {
+      network: "mainnet" | "testnet" | "regtest";
+      defaultFee?: number;
+      defaultFeePerKb?: number;
+      minDustValue?: number;
+      softMaxUtxos?: number;
+    })
 
     public buildSendTransaction(args: any): ICapiBuiltTransaction
     public buildIssueTransaction(args: any): ICapiBuiltIssueTransaction
