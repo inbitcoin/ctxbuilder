@@ -59,7 +59,7 @@ If `properties` is specified, then the default properties will be overridden.
   network: String,              // Which blockchain network should be used ('testnet' or 'mainnet', default='mainnet')
   defaultFee: Number,           // Transaction miner fee, fixed (default=null)
   defaultFeePerKb: Number,      // Transaction miner fee, per Kb (default=null)
-  mindustvalue: Number,         // Minimum value to put in each output, in satoshi (except for OP_RETURN, default=600)
+  minDustValue: Number,         // Minimum value to put in each output, in satoshi (except for OP_RETURN, default=600)
 }
 ```
 

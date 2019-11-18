@@ -27,7 +27,7 @@ var ColoredCoinsBuilder = function (properties) {
   }
   this.defaultFeePerKb = parseInt(properties.defaultFeePerKb) || 25000
 
-  this.mindustvalue = parseInt(properties.mindustvalue) || 600
+  this.minDustValue = parseInt(properties.minDustValue) || 600
 
   this.softMaxUtxos = parseInt(properties.softMaxUtxos) || 666
 }
@@ -201,11 +201,11 @@ ColoredCoinsBuilder.prototype._getIssuanceCost = function (args) {
   debug('_getTotalIssuenceCost: fee =', fee)
   if (args.transfer && args.transfer.length) {
     args.transfer.forEach(function (to) {
-      totalCost += self.mindustvalue
+      totalCost += self.minDustValue
     })
   }
   // change
-  totalCost += self.mindustvalue
+  totalCost += self.minDustValue
 
   debug('_getTotalIssuenceCost: totalCost =', totalCost)
   return totalCost
@@ -278,9 +278,9 @@ ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
       if (transferobj.pubKeys && transferobj.m) {
         var multisig = self._generateMultisigAddress(transferobj.pubKeys, transferobj.m)
         reedemScripts.push({index: txb.tx.outs.length, reedemScript: multisig.reedemScript, address: multisig.address})
-        txb.addOutput(multisig.address, self.mindustvalue)
+        txb.addOutput(multisig.address, self.minDustValue)
       } else {
-        txb.addOutput(transferobj.address, self.mindustvalue)
+        txb.addOutput(transferobj.address, self.minDustValue)
       }
     })
   }
@@ -327,22 +327,22 @@ ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
   var allOutputValues = _.sumBy(txb.tx.outs, function (output) { return output.value })
   debug('all inputs: ' + args.totalInputs.amount + ' all outputs: ' + allOutputValues)
   var lastOutputValue = args.totalInputs.amount - (allOutputValues + fee)
-  if (lastOutputValue < self.mindustvalue) {
-    var totalCost = self.mindustvalue + args.totalInputs.amount.toNumber()
+  if (lastOutputValue < self.minDustValue) {
+    var totalCost = self.minDustValue + args.totalInputs.amount.toNumber()
     throw new errors.NotEnoughFundsError({
       type: 'issuance',
       fee: fee,
       totalCost: totalCost,
-      missing: self.mindustvalue - lastOutputValue
+      missing: self.minDustValue - lastOutputValue
     })
   }
 
   var splitChange = !(args.financeChangeAddress == false)
   var changeAddress = args.financeChangeAddress || args.issueAddress
 
-  if (splitChange && lastOutputValue >= 2 * self.mindustvalue && coloredAmount > 0) {
-    var bitcoinChange = lastOutputValue - self.mindustvalue
-    lastOutputValue = self.mindustvalue
+  if (splitChange && lastOutputValue >= 2 * self.minDustValue && coloredAmount > 0) {
+    var bitcoinChange = lastOutputValue - self.minDustValue
+    lastOutputValue = self.minDustValue
     debug('adding bitcoin change output with: ' + bitcoinChange)
     txb.addOutput(changeAddress, bitcoinChange)
   }
@@ -502,11 +502,11 @@ ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
 
   if (args.to && args.to.length) {
     args.to.forEach(function (to) {
-      fee += self.mindustvalue
+      fee += self.minDustValue
     })
   }
 
-  fee += self.mindustvalue
+  fee += self.minDustValue
 
   debug('comupteCost: ' + fee)
   return fee
@@ -611,7 +611,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     var uniqAssets = _.uniqBy(currentAsset.addresses, function (item) { return item.address })
     debug('uniqAssets = ', uniqAssets)
     uniqAssets.forEach(function (address) {
-      debug('adding output ' + (txb.tx.outs ? txb.tx.outs.length : 0) + ' for address: ' + address.address + ' with satoshi value ' + self.mindustvalue + ' asset value: ' + address.amount)
+      debug('adding output ' + (txb.tx.outs ? txb.tx.outs.length : 0) + ' for address: ' + address.address + ' with satoshi value ' + self.minDustValue + ' asset value: ' + address.amount)
       var addressAmountLeft = address.amount
       debug('currentAsset = ', currentAsset, ', currentAsset.inputs.length = ', currentAsset.inputs.length)
       currentAsset.inputs.some(function (input) {
@@ -641,7 +641,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
       })
       debug('putting output in transaction')
       if (address.address !== 'burn') {
-        txb.addOutput(address.address, self.mindustvalue)
+        txb.addOutput(address.address, self.minDustValue)
       }
       if (address.reedemScript) {
         reedemScripts.push({ index: txb.tx.outs.length - 1, reedemScript: address.reedemScript, address: address.address })
@@ -685,17 +685,17 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
   })
 
   var splitChange = Boolean(args.bitcoinChangeAddress)
-  var numOfChanges = (splitChange && coloredChange && lastOutputValue >= 2 * self.mindustvalue) ? 2 : 1
+  var numOfChanges = (splitChange && coloredChange && lastOutputValue >= 2 * self.minDustValue) ? 2 : 1
 
-  if (lastOutputValue < numOfChanges * self.mindustvalue) {
+  if (lastOutputValue < numOfChanges * self.minDustValue) {
     debug('trying to add additionl inputs to cover transaction')
-    satoshiCost = self._getInputAmountNeededForTx(txb.tx, args.fee) + numOfChanges * self.mindustvalue
+    satoshiCost = self._getInputAmountNeededForTx(txb.tx, args.fee) + numOfChanges * self.minDustValue
     if (!self._tryAddingInputsForFee(txb, args.utxos, totalInputs, args, satoshiCost)) {
       throw new errors.NotEnoughFundsError({
         type: 'transfer',
         fee: args.fee,
         totalCost: satoshiCost,
-        missing: self.mindustvalue - lastOutputValue
+        missing: self.minDustValue - lastOutputValue
       })
     }
     lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
@@ -703,9 +703,9 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
 
   var btcCangeValue = lastOutputValue
   if (numOfChanges === 2) {
-    btcCangeValue = lastOutputValue - self.mindustvalue
-    lastOutputValue = self.mindustvalue
-    // TODO: test btcCangeValue > mindustvalue
+    btcCangeValue = lastOutputValue - self.minDustValue
+    lastOutputValue = self.minDustValue
+    // TODO: test btcCangeValue > minDustValue
   }
 
   if (numOfChanges === 2 || !coloredChange) {
