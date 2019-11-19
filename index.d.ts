@@ -16,7 +16,18 @@ declare module '@inbitcoin/ctxbuilder' {
       fee?: number
       defaultFee?: number
     }): ICapiBuiltTransaction
-    public buildIssueTransaction(args: any): ICapiBuiltIssueTransaction
+    public buildIssueTransaction(args: {
+      utxos: Array<ICapiUtxo>
+      issueAddress?: string
+      amount: number
+      divisibility?: number
+      aggregationPolicy?: string
+      to?: Array<{ address: string; amount: number }>
+      changeAddress: string | (() => Promise<string>)
+      bitcoinChangeAddress?: string | (() => Promise<string>)
+      fee?: number
+      defaultFee?: number
+    }): ICapiBuiltIssueTransaction
   }
 
   export = ColoredCoinsBuilder
