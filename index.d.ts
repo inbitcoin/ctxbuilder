@@ -8,7 +8,14 @@ declare module '@inbitcoin/ctxbuilder' {
       softMaxUtxos?: number;
     })
 
-    public buildSendTransaction(args: any): ICapiBuiltTransaction
+    public buildSendTransaction(args: {
+      utxos: Array<ICapiUtxo>
+      to: Array<{ address: string; amount: number }>
+      changeAddress: string | (() => Promise<string>)
+      bitcoinChangeAddress?: string | (() => Promise<string>)
+      fee?: number
+      defaultFee?: number
+    }): ICapiBuiltTransaction
     public buildIssueTransaction(args: any): ICapiBuiltIssueTransaction
   }
 
@@ -24,4 +31,30 @@ declare interface ICapiBuiltIssueTransaction {
   assetId: string
   txHex: string
   coloredOutputIndexes: number[]
+}
+
+declare interface IScriptPubKey {
+  asm?: string
+  hex: string
+  reqSig?: number
+  type?: string
+  addresses: string[]
+}
+
+declare interface IAsset {
+  assetId: string
+  amount: number
+  issueTxid: string
+  divisibility: number
+  lockStatus: boolean
+  aggregationPolicy: string
+}
+
+declare interface ICapiUtxo {
+  index: number
+  txid: string
+  value: number
+  used: boolean
+  scriptPubKey: IScriptPubKey
+  assets: IAsset[]
 }
