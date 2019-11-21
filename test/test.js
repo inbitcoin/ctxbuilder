@@ -465,3 +465,25 @@ describe('the burn builder', function () {
     assert.equal(ccTransaction.payments[0].amount, burnArgs.burn[0].amount)
   })
 })
+
+describe('the class constructor', function (){
+  it('use custom minDustValue', async function () {
+
+    var builder = new ColoredCoinsBuilder({
+      network: 'testnet',
+      minDustValue: 777,
+    })
+
+    var args = clone(sendArgs)
+    args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+    var result = await builder.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+    assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+    assert.equal(tx.outs[0].value, 777, 'Satoshis to receiver')
+    assert.equal(tx.outs[1].value, 0, 'Satoshis to the op return output')
+    assert.equal(tx.outs[3].value, 777, 'Satoshis to the colored change output')
+  })
+})
