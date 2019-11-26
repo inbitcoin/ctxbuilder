@@ -482,8 +482,8 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
   if (!args.changeAddress) {
     throw new Error('Must have "changeAddress"')
   }
-  if (!args.fee && !self.defaultFee) {
-    throw new Error('Must have "fee"')
+  if (!args.fee && !self.defaultFee && !args.feePerKb) {
+    throw new Error('Must have "fee" or "feePerKb"')
   }
   checkNotSupportedArgs(args, 'send')
 
