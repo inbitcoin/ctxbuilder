@@ -314,14 +314,14 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
   })
 
-  describe('coin selection', function() {
-
-    function addUtxos(args, n) {
-      for (var i=1; i<=n; i++) {
-        args.utxos.push(clone(args.utxos[0]))
-        args.utxos[i].index = i
-      }
+  function addUtxos(args, n) {
+    for (var i=1; i<=n; i++) {
+      args.utxos.push(clone(args.utxos[0]))
+      args.utxos[i].index = i
     }
+  }
+
+  describe('coin selection', function() {
 
     function expectedNumberOfUtxos(utxos, softMaxUtxos) {
       var overSize = utxos.length - softMaxUtxos
@@ -406,10 +406,51 @@ describe('the send builder', function () {
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
     assert.equal(tx.ins.length, 1)
-    assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + change
+    assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
     assert.deepEqual(result.coloredOutputIndexes, [0, 3])
     assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
     assert.equal(outputScriptToAddress(tx.outs[3].script), sendArgs.changeAddress, 'assets change')
+  })
+  describe('feePerKb', async function() {
+    it('works if the parameter feePerKb is used instead of fee', async function() {
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      delete args.fee
+      args.feePerKb = 7777
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      var size = Math.round(result.txHex.length / 2)
+      assert.equal(tx.ins.length, 1)
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach((input) => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var fee = sumValueInputs - sumValueOutputs
+      var feePerKb = fee / (size / 1000)
+      assert.equal(feePerKb, 777)
+    })
+    it('works with bitcoin dust inputs', async function() {
+      // Here we'll test the edge case when a new utxo is needed to pay for fees,
+      // and the new utxo increas the fee so another utxo is needed
+      var args = clone(sendArgs)
+      addUtxos(args, 2)
+      // TODO: modify u.value in order to trigger the cycle
+      args.feePerKb = 7777
+      var result = await ccb.buildSendTransaction(args)
+      // TODO: some type of checks on result
+    })
+    it('raises an error on too low fees', async function() {
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      delete args.fee
+      args.feePerKb = 77
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /A meaningful request/)
+    })
   })
 })
 
