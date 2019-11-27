@@ -160,8 +160,15 @@ describe('the send builder', function () {
   it('args must have fee field', async function () {
     var args = clone(sendArgs)
     delete args.fee
-    await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must have "fee"/)
+    await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must have "fee" or "feePerKb"/)
   })
+
+  it('args must have fee field', async function () {
+    var args = clone(sendArgs)
+    args.feePerKb = 2200
+    await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must not have "fee" and "feePerKb"/)
+  })
+  
 
   it('args must have changeAddress field', async function () {
     var args = clone(sendArgs)

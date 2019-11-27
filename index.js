@@ -375,6 +375,9 @@ ColoredCoinsBuilder.prototype._addHashesOutput = function (tx, address, sha2, sh
   tx.outs.unshift({ script: script, value: self._getNoneMinDustByScript(script) })
 }
 
+/** This compute the minDustFee and multipy it for defaultFeePerSat.
+ *  I don't know why
+ */
 ColoredCoinsBuilder.prototype._getNoneMinDustByScript = function (script) {
   var self = this
   // add 9 to aacount for bitcoind SER_DISK serilaztion before the multiplication
@@ -388,6 +391,13 @@ function isInputInTx (tx, txid, index) {
   })
 }
 
+/**
+ * Add all the utxos until they are not enough
+ * Fields updated by the function:
+ * - inputsValue
+ * - metadata
+ * - txb.tx
+ */
 ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function (utxos, txb, missing, inputsValue, metadata) {
   debug('missing: ' + missing)
   var paymentDone = false
@@ -395,6 +405,7 @@ ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function (utxos, txb
   var financeValue = new BigNumber(0)
   var currentAmount = new BigNumber(0)
 
+  // Add all the utxos until they are not enough
   var hasEnoughEquity = utxos.some(function (utxo) {
     utxo.value = Math.round(utxo.value)
     if (!isInputInTx(txb.tx, utxo.txid, utxo.index) && !(utxo.assets && utxo.assets.length)) {
@@ -441,6 +452,9 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
   if (!args.fee && !args.feePerKb) {
     throw new Error('Must have "fee" or "feePerKb"')
   }
+  if (args.fee && args.feePerKb) {
+    throw new Error('Must not have "fee" and "feePerKb"')
+  }
   checkNotSupportedArgs(args, 'send')
 
   if (args.fee) {
@@ -468,11 +482,13 @@ ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
   return fee
 }
 
+/** 1 minDustFee for each output + fee
+ */
 ColoredCoinsBuilder.prototype._getInputAmountNeededForTx = function (tx, fee) {
   var self = this
   var total = fee
   tx.outs.forEach(function (output) {
-    total += self._getNoneMinDustByScript(output.script, fee)
+    total += self.minDustValue
   })
   return total
 }
@@ -485,7 +501,6 @@ ColoredCoinsBuilder.prototype._getChangeAmount = function (tx, fee, totalInputVa
 
 ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb, args) {
   var self = this
-  var satoshiCost = self._computeCost(true, args)
   var totalInputs = { amount: 0 }
   var reedemScripts = []
   var coloredOutputIndexes = []
@@ -546,14 +561,6 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
   }
   debug('reached encoder')
   var encoder = cc.newTransaction(0x4343, CC_TX_VERSION)
-  if (!self._tryAddingInputsForFee(txb, args.utxos, totalInputs, args, satoshiCost)) {
-    throw new errors.NotEnoughFundsError({
-      type: 'transfer',
-      fee: args.fee,
-      totalCost: satoshiCost,
-      missing: satoshiCost - totalInputs.amount
-    })
-  }
 
   for (asset in assetList) {
     var currentAsset = assetList[asset]
@@ -627,60 +634,81 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     buffer.codeBuffer
   ])
 
-  txb.addOutput(ret, 0)
-  var lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
-  var coloredChange = _.keys(assetList).some(function (assetId) {
-    return assetList[assetId].change > 0
-  })
+  // Fees cycle
+  while (true) {
+    if (args.feePerKb) {
+      // Iteratively discover the fee
+      // Start from 1
+    }
 
-  var splitChange = Boolean(args.bitcoinChangeAddress)
-  var numOfChanges = (splitChange && coloredChange && lastOutputValue >= 2 * self.minDustValue) ? 2 : 1
+    // _computeCost use args.fee as parameter
+    var satoshiCost = self._computeCost(true, args)
 
-  if (lastOutputValue < numOfChanges * self.minDustValue) {
-    debug('trying to add additionl inputs to cover transaction')
-    satoshiCost = self._getInputAmountNeededForTx(txb.tx, args.fee) + numOfChanges * self.minDustValue
+    // FEE-HERE
     if (!self._tryAddingInputsForFee(txb, args.utxos, totalInputs, args, satoshiCost)) {
       throw new errors.NotEnoughFundsError({
         type: 'transfer',
         fee: args.fee,
         totalCost: satoshiCost,
-        missing: self.minDustValue - lastOutputValue
+        missing: satoshiCost - totalInputs.amount
       })
     }
-    lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
-  }
 
-  var btcCangeValue = lastOutputValue
-  if (numOfChanges === 2) {
-    btcCangeValue = lastOutputValue - self.minDustValue
-    lastOutputValue = self.minDustValue
-    // TODO: test btcCangeValue > minDustValue
-  }
+    txb.addOutput(ret, 0)
+    var lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
+    var coloredChange = _.keys(assetList).some(function (assetId) {
+      return assetList[assetId].change > 0
+    })
 
-  if (numOfChanges === 2 || !coloredChange) {
-    // Add btc
-    if (typeof args.bitcoinChangeAddress === 'function') {
-      txb.addOutput(await args.bitcoinChangeAddress(), btcCangeValue)
-    } else {
-      if (args.bitcoinChangeAddress == 'placeholder') {
-        args.bitcoinChangeAddress = self.getPlaceholderAddress(1)
+    var splitChange = Boolean(args.bitcoinChangeAddress)
+    var numOfChanges = (splitChange && coloredChange && lastOutputValue >= 2 * self.minDustValue) ? 2 : 1
+
+    if (lastOutputValue < numOfChanges * self.minDustValue) {
+      debug('trying to add additionl inputs to cover transaction')
+      satoshiCost = args.fee + (txb.tx.outs.length + numOfChanges) * self.minDustValue
+      if (!self._tryAddingInputsForFee(txb, args.utxos, totalInputs, args, satoshiCost)) {
+        throw new errors.NotEnoughFundsError({
+          type: 'transfer',
+          fee: args.fee,
+          totalCost: satoshiCost,
+          missing: numOfChanges * self.minDustValue - lastOutputValue
+        })
       }
-      txb.addOutput(args.bitcoinChangeAddress, btcCangeValue)
+      lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
     }
-  }
-  if (coloredChange) {
-    coloredOutputIndexes.push(txb.tx.outs.length)
-    if (typeof args.changeAddress === 'function') {
-      txb.addOutput(await args.changeAddress(), lastOutputValue)
-    } else {
-      if (args.changeAddress == 'placeholder') {
-        args.changeAddress = self.getPlaceholderAddress(2)
+
+    var btcChangeValue = lastOutputValue
+    if (numOfChanges === 2) {
+      btcChangeValue = lastOutputValue - self.minDustValue
+      lastOutputValue = self.minDustValue
+      // TODO: test btcChangeValue > minDustValue
+    }
+
+    if (numOfChanges === 2 || !coloredChange) {
+      // Add btc
+      if (typeof args.bitcoinChangeAddress === 'function') {
+        txb.addOutput(await args.bitcoinChangeAddress(), btcChangeValue)
+      } else {
+        if (args.bitcoinChangeAddress == 'placeholder') {
+          args.bitcoinChangeAddress = self.getPlaceholderAddress(1)
+        }
+        txb.addOutput(args.bitcoinChangeAddress, btcChangeValue)
       }
-      txb.addOutput(args.changeAddress, lastOutputValue)
     }
+    if (coloredChange) {
+      coloredOutputIndexes.push(txb.tx.outs.length)
+      if (typeof args.changeAddress === 'function') {
+        txb.addOutput(await args.changeAddress(), lastOutputValue)
+      } else {
+        if (args.changeAddress == 'placeholder') {
+          args.changeAddress = self.getPlaceholderAddress(2)
+        }
+        txb.addOutput(args.changeAddress, lastOutputValue)
+      }
+    }
+    debug('success')
+    return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
   }
-  debug('success')
-  return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
 }
 
 ColoredCoinsBuilder.prototype.buildBurnTransaction = async function (args) {
@@ -693,7 +721,7 @@ ColoredCoinsBuilder.prototype.buildBurnTransaction = async function (args) {
   to.push.apply(to, burn)
   delete args.transfer
   args.to = to
-  return await self.buildSendTransaction(args)
+  return self.buildSendTransaction(args)
 }
 
 module.exports = ColoredCoinsBuilder
