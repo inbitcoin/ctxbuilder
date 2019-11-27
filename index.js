@@ -22,9 +22,6 @@ var ColoredCoinsBuilder = function (properties) {
   }
   this.network = properties.network || 'mainnet' // 'testnet' or 'mainnet'
 
-  if (properties.defaultFee) {
-    this.defaultFee = parseInt(properties.defaultFee)
-  }
   this.defaultFeePerKb = parseInt(properties.defaultFeePerKb) || 25000
 
   this.minDustValue = parseInt(properties.minDustValue) || 600
@@ -36,7 +33,7 @@ function checkNotSupportedArgs(args, builder) {
   function error() {
     throw new Error('Some args are not supported anymore')
   }
-  if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.from || args.to && args.to.pubKeys && args.to.m) {
+  if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.from || args.to && args.to.pubKeys && args.to.m || args.defaultFee) {
     error()
   }
   if (builder === "send") {
@@ -93,7 +90,7 @@ ColoredCoinsBuilder.prototype.buildIssueTransaction = async function (args) {
   if (!args.utxos) {
     throw new Error('Must have "utxos"')
   }
-  if (!args.fee && !self.defaultFee) {
+  if (!args.fee) {
     throw new Error('Must have "fee"')
   }
   if (!args.issueAddress) {
@@ -176,7 +173,7 @@ ColoredCoinsBuilder.prototype._addInputsForIssueTransaction = function (txb, arg
 
 ColoredCoinsBuilder.prototype._getIssuanceCost = function (args) {
   var self = this
-  var fee = args.fee || self.defaultFee
+  var fee = args.fee
   var totalCost = fee
   debug('_getTotalIssuenceCost: fee =', fee)
   if (args.transfer && args.transfer.length) {
@@ -232,7 +229,7 @@ ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
   var coloredOutputIndexes = []
   var txb = args.txb
   var coloredAmount = args.amount
-  var fee = args.fee || self.defaultFee
+  var fee = args.fee
   var lockStatus
   if (typeof args.lockStatus !== 'undefined') {
     lockStatus = args.lockStatus
@@ -441,7 +438,7 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
   if (!args.changeAddress) {
     throw new Error('Must have "changeAddress"')
   }
-  if (!args.fee && !self.defaultFee && !args.feePerKb) {
+  if (!args.fee && !args.feePerKb) {
     throw new Error('Must have "fee" or "feePerKb"')
   }
   checkNotSupportedArgs(args, 'send')
