@@ -39,8 +39,10 @@ function checkNotSupportedArgs(args, builder) {
   if (args.torrentHash || args.sha2 || args.metadata || args.rules || args.from || args.to && args.to.pubKeys && args.to.m) {
     error()
   }
-  if (builder === "send" && args.financeChangeAddress) {
-    error()
+  if (builder === "send") {
+    if (args.financeChangeAddress || args.financeOutput) {
+      error()
+    }
   }
 }
 
@@ -127,28 +129,6 @@ ColoredCoinsBuilder.prototype._addInputsForIssueTransaction = function (txb, arg
   var assetId = ''
   var current
   var cost
-
-  // simple mode
-  if (args.financeOutput) {
-    current = new BigNumber(args.financeOutput.value)
-    cost = new BigNumber(self._getIssuanceCost(args))
-
-    txb.addInput(args.financeOutputTxid, args.financeOutput.n)
-    if (args.flags && args.flags.injectPreviousOutput) {
-      var chunks = bitcoinjs.script.decompile(new Buffer(args.financeOutput.scriptPubKey.hex, 'hex'))
-      txb.tx.ins[txb.tx.ins.length - 1].script = bitcoinjs.script.compile(chunks)
-    }
-
-    assetId = self._encodeAssetId(
-      args.reissueable,
-      args.financeOutputTxid,
-      args.financeOutput.n,
-      args.financeOutput.scriptPubKey.hex,
-      args.divisibility,
-      args.aggregationPolicy)
-
-    return {txb: txb, args: args, change: current - cost, assetId: assetId, totalInputs: {amount: current}}
-  }
 
   // add to transaction enough inputs so we can cover the cost
   // send change if any back to us
@@ -417,27 +397,6 @@ ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function (utxos, txb
   var missingbn = new BigNumber(missing)
   var financeValue = new BigNumber(0)
   var currentAmount = new BigNumber(0)
-  if (metadata.financeOutput && metadata.financeOutputTxid) {
-    if (isInputInTx(txb.tx, metadata.financeOutputTxid, metadata.financeOutput.n)) { return false }
-    financeValue = new BigNumber(metadata.financeOutput.value)
-    debug('finance sent through api with value ' + financeValue.toNumber())
-    if (financeValue.minus(missingbn) >= 0) {
-      // TODO: check there is no asset here
-      debug('funding tx ' + metadata.financeOutputTxid)
-      txb.tx.addInput(metadata.financeOutputTxid, metadata.financeOutput.n)
-      inputsValue.amount += financeValue.toNumber()
-      if (metadata.flags && metadata.flags.injectPreviousOutput) {
-        var chunks = bitcoinjs.script.decompile(new Buffer(metadata.financeOutput.scriptPubKey.hex, 'hex'))
-        txb.tx.ins[txb.ins.length - 1].script = bitcoinjs.script.compile(chunks)
-      }
-      paymentDone = true
-      return paymentDone
-    } else {
-      debug('finance output not added to transaction finace value: ' + financeValue.toNumber() + ' still needed: ' + missingbn.toNumber())
-    }
-  } else {
-    debug('no financeOutput was given')
-  }
 
   var hasEnoughEquity = utxos.some(function (utxo) {
     utxo.value = Math.round(utxo.value)
@@ -655,16 +614,9 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
   debug('before using encoder')
   var buffer = encoder.encode()
   if (buffer.leftover && buffer.leftover.length > 0) {
-    encoder.shiftOutputs()
-    reedemScripts.forEach(function (item) { item.index += 1 })
-    buffer = encoder.encode()
-    if (buffer.leftover.length === 1) {
-      self._addHashesOutput(txb.tx, args.pubKeyReturnMultisigDust, buffer.leftover[0])
-    } else if (buffer.leftover.length === 2) {
-      self._addHashesOutput(txb.tx, args.pubKeyReturnMultisigDust, buffer.leftover[1], buffer.leftover[0])
-    } else {
-      throw new errors.CCTransactionConstructionError()
-    }
+    // We don't expect to enter here
+    // Unsupported feature
+    throw new errors.CCTransactionConstructionError()
   }
 
   // add array of colored ouput indexes
