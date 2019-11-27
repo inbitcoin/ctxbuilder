@@ -419,6 +419,12 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[3].script), sendArgs.changeAddress, 'assets change')
   })
   describe('feePerKb', async function() {
+
+    function testFeePerKb(actual, expected) {
+      assert.ok(actual >= expected, 'feePerKb is too low')
+      assert.ok(actual < expected * 1.1, 'feePerKb is too high')
+    }
+
     it('works if the parameter feePerKb is used instead of fee', async function() {
       var args = clone(sendArgs)
       args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
@@ -439,7 +445,7 @@ describe('the send builder', function () {
       var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
       var fee = sumValueInputs - sumValueOutputs
       var feePerKb = fee / (size / 1000)
-      assert.equal(feePerKb, 777)
+      testFeePerKb(feePerKb, 7777)
     })
     it('works with bitcoin dust inputs', async function() {
       // Here we'll test the edge case when a new utxo is needed to pay for fees,

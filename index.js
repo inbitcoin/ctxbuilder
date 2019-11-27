@@ -468,7 +468,7 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
 
 ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
   var self = this
-  var fee = withfee ? (args.fee || args.minfee) : 0
+  var fee = withfee ? args.fee : 0
 
   if (args.to && args.to.length) {
     args.to.forEach(function (to) {
@@ -478,7 +478,7 @@ ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
 
   fee += self.minDustValue
 
-  debug('comupteCost: ' + fee)
+  debug('comupteCost: ' + fee + ' outs.len = ' + args.to.length)
   return fee
 }
 
@@ -633,19 +633,24 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     bitcoinjs.opcodes.OP_RETURN,
     buffer.codeBuffer
   ])
+  txb.addOutput(ret, 0)
 
   // Fees cycle
+  if (args.feePerKb && !args.fee) {
+    // Iteratively discover the fee
+    // Start from 1: it is like 0, but Boolean(1) is true
+    args.fee = 1
+    debug('Init args.fee = 1')
+  }
+  var txLen = 0
   while (true) {
-    if (args.feePerKb) {
-      // Iteratively discover the fee
-      // Start from 1
-    }
-
+    debug('Begin of fee cycle')
+    var builder = _.cloneDeep(txb)
+    builder.tx = _.cloneDeep(txb.tx)  // Because deep is not so deep
     // _computeCost use args.fee as parameter
     var satoshiCost = self._computeCost(true, args)
-
-    // FEE-HERE
-    if (!self._tryAddingInputsForFee(txb, args.utxos, totalInputs, args, satoshiCost)) {
+    debug('New satoshiCost = ' + satoshiCost)
+    if (!self._tryAddingInputsForFee(builder, args.utxos, totalInputs, args, satoshiCost)) {
       throw new errors.NotEnoughFundsError({
         type: 'transfer',
         fee: args.fee,
@@ -654,8 +659,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
       })
     }
 
-    txb.addOutput(ret, 0)
-    var lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
+    var lastOutputValue = self._getChangeAmount(builder.tx, args.fee, totalInputs)
     var coloredChange = _.keys(assetList).some(function (assetId) {
       return assetList[assetId].change > 0
     })
@@ -663,10 +667,12 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     var splitChange = Boolean(args.bitcoinChangeAddress)
     var numOfChanges = (splitChange && coloredChange && lastOutputValue >= 2 * self.minDustValue) ? 2 : 1
 
+    debug('lastOutputValue = ' + lastOutputValue)
     if (lastOutputValue < numOfChanges * self.minDustValue) {
       debug('trying to add additionl inputs to cover transaction')
-      satoshiCost = args.fee + (txb.tx.outs.length + numOfChanges) * self.minDustValue
-      if (!self._tryAddingInputsForFee(txb, args.utxos, totalInputs, args, satoshiCost)) {
+      debug('Outs len = ' + builder.tx.outs.length)
+      satoshiCost = args.fee + (builder.tx.outs.length -1 + numOfChanges) * self.minDustValue
+      if (!self._tryAddingInputsForFee(builder, args.utxos, totalInputs, args, satoshiCost)) {
         throw new errors.NotEnoughFundsError({
           type: 'transfer',
           fee: args.fee,
@@ -674,7 +680,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
           missing: numOfChanges * self.minDustValue - lastOutputValue
         })
       }
-      lastOutputValue = self._getChangeAmount(txb.tx, args.fee, totalInputs)
+      lastOutputValue = self._getChangeAmount(builder.tx, args.fee, totalInputs)
     }
 
     var btcChangeValue = lastOutputValue
@@ -687,27 +693,41 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     if (numOfChanges === 2 || !coloredChange) {
       // Add btc
       if (typeof args.bitcoinChangeAddress === 'function') {
-        txb.addOutput(await args.bitcoinChangeAddress(), btcChangeValue)
+        builder.addOutput(await args.bitcoinChangeAddress(), btcChangeValue)
       } else {
         if (args.bitcoinChangeAddress == 'placeholder') {
           args.bitcoinChangeAddress = self.getPlaceholderAddress(1)
         }
-        txb.addOutput(args.bitcoinChangeAddress, btcChangeValue)
+        builder.addOutput(args.bitcoinChangeAddress, btcChangeValue)
       }
     }
     if (coloredChange) {
-      coloredOutputIndexes.push(txb.tx.outs.length)
+      coloredOutputIndexes.push(builder.tx.outs.length)
       if (typeof args.changeAddress === 'function') {
-        txb.addOutput(await args.changeAddress(), lastOutputValue)
+        builder.addOutput(await args.changeAddress(), lastOutputValue)
       } else {
         if (args.changeAddress == 'placeholder') {
           args.changeAddress = self.getPlaceholderAddress(2)
         }
-        txb.addOutput(args.changeAddress, lastOutputValue)
+        builder.addOutput(args.changeAddress, lastOutputValue)
+      }
+    }
+    var hex = builder.tx.toHex()
+    txLen = Math.round(hex.length / 2)
+    if (args.feePerKb) {
+      // Is the fee rate correct?
+      var realFeePerKb = args.fee / txLen * 1000
+      if (realFeePerKb < args.feePerKb) {
+        // Retry!
+        debug('Current args.fee = ' + args.fee + ' feePerKb = ' + realFeePerKb)
+        debug('Wanted feePerKb = ' + args.feePerKb + ' txLen = ' + txLen)
+        args.fee = Math.ceil(txLen / 1000 * args.feePerKb)
+        debug('Insufficient fee rate, retry with new fee = ' + args.fee)
+        continue
       }
     }
     debug('success')
-    return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
+    return { txHex: hex, coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
   }
 }
 
