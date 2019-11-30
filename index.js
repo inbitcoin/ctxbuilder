@@ -134,7 +134,7 @@ ColoredCoinsBuilder.prototype._addInputsForIssueTransaction = function (txb, arg
   var change = new BigNumber(0)
   var hasEnoughEquity = utxos.some(function (utxo) {
     if (!isInputInTx(txb.tx, utxo.txid, utxo.index) && !(utxo.assets && utxo.assets.length)) {
-      debug('current amount ' + utxo.value + ' needed ' + cost)
+      debug('1. current amount ' + utxo.value + ' needed ' + cost)
       debug('utxo.txid', utxo.txid)
       debug('utxo.index', utxo.index)
       txb.addInput(utxo.txid, utxo.index)
@@ -154,7 +154,7 @@ ColoredCoinsBuilder.prototype._addInputsForIssueTransaction = function (txb, arg
         var chunks = bitcoinjs.script.decompile(new Buffer(utxo.scriptPubKey.hex, 'hex'))
         txb.tx.ins[txb.tx.ins.length - 1].script = bitcoinjs.script.compile(chunks)
       }
-      debug('current amount: ' + current + ' projected cost: ' + cost + ' are were there yet: ' + (current.comparedTo(cost) >= 0))
+      debug('current amount ' + current + ' projected cost: ' + cost + ' are were there yet: ' + (current.comparedTo(cost) >= 0))
     } else {
       debug('skipping utxo for input, asset found in utxo: ' + utxo.txid + ':' + utxo.index)
     }
@@ -409,7 +409,8 @@ ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function (utxos, txb
   var hasEnoughEquity = utxos.some(function (utxo) {
     utxo.value = Math.round(utxo.value)
     if (!isInputInTx(txb.tx, utxo.txid, utxo.index) && !(utxo.assets && utxo.assets.length)) {
-      debug('current amount ' + utxo.value + ' needed ' + missing)
+      debug('2. current amount ' + utxo.value + ' needed ' + missing)
+      debug('add input: ' + utxo.txid + ':' + utxo.index)
       txb.addInput(utxo.txid, utxo.index)
       inputsValue.amount += utxo.value
       currentAmount = currentAmount.add(utxo.value)
@@ -417,11 +418,12 @@ ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function (utxos, txb
         var chunks = bitcoinjs.script.decompile(new Buffer(utxo.scriptPubKey.hex, 'hex'))
         txb.tx.ins[txb.tx.ins.length - 1].script = bitcoinjs.script.compile(chunks)
       }
+      debug(txb.tx)
     }
     return currentAmount.comparedTo(missingbn) >= 0
   })
 
-  debug('hasEnoughEquity: ' + hasEnoughEquity)
+  debug('hasEnoughEquity: ' + hasEnoughEquity + ' missiyesg: ' + missing)
 
   return hasEnoughEquity
 }
@@ -434,7 +436,9 @@ ColoredCoinsBuilder.prototype._tryAddingInputsForFee = function (txb, utxos, tot
       debug('not enough satoshi in account for fees')
       return false
     }
-  } else { debug('No need for additional finance') }
+  } else {
+    debug('No need for additional finance. cost: ' + satoshiCost + ' input: ' + totalInputs.amount)
+  }
   return true
 }
 
@@ -454,6 +458,9 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
   }
   if (args.fee && args.feePerKb) {
     throw new Error('Must not have "fee" and "feePerKb"')
+  }
+  if (args.feePerKb && args.feePerKb < 1000) {
+    throw new Error('"feePerKb" is too low')
   }
   checkNotSupportedArgs(args, 'send')
 
@@ -639,14 +646,17 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
   if (args.feePerKb && !args.fee) {
     // Iteratively discover the fee
     // Start from 1: it is like 0, but Boolean(1) is true
-    args.fee = 1
-    debug('Init args.fee = 1')
+    args.fee = 100
+    debug('Init args.fee = 100')
   }
   var txLen = 0
+  // baseInput: satoshis provided by the assets utxos
+  var baseInput = totalInputs.amount
   while (true) {
     debug('Begin of fee cycle')
     var builder = _.cloneDeep(txb)
     builder.tx = _.cloneDeep(txb.tx)  // Because deep is not so deep
+    totalInputs.amount = baseInput
     // _computeCost use args.fee as parameter
     var satoshiCost = self._computeCost(true, args)
     debug('New satoshiCost = ' + satoshiCost)

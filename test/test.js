@@ -321,10 +321,13 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
   })
 
-  function addUtxos(args, n) {
+  function addUtxos(args, n, bitcoinOnly) {
     for (var i=1; i<=n; i++) {
       args.utxos.push(clone(args.utxos[0]))
       args.utxos[i].index = i
+      if (bitcoinOnly) {
+        args.utxos[i].assets = []
+      }
     }
   }
 
@@ -421,8 +424,9 @@ describe('the send builder', function () {
   describe('feePerKb', async function() {
 
     function testFeePerKb(actual, expected) {
-      assert.ok(actual >= expected, 'feePerKb is too low')
-      assert.ok(actual < expected * 1.1, 'feePerKb is too high')
+      var msg = '. actual = ' + actual + ' e expected = ' + expected
+      assert.ok(actual >= expected, 'feePerKb is too low' + msg)
+      assert.ok(actual < expected * 1.1, 'feePerKb is too high' + msg)
     }
 
     it('works if the parameter feePerKb is used instead of fee', async function() {
@@ -433,7 +437,6 @@ describe('the send builder', function () {
       var result = await ccb.buildSendTransaction(args)
       assert(result.txHex)
       var tx = Transaction.fromHex(result.txHex)
-      var size = Math.round(result.txHex.length / 2)
       assert.equal(tx.ins.length, 1)
       assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
       assert.deepEqual(result.coloredOutputIndexes, [0, 3])
@@ -444,6 +447,7 @@ describe('the send builder', function () {
       })
       var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
       var fee = sumValueInputs - sumValueOutputs
+      var size = Math.round(result.txHex.length / 2)
       var feePerKb = fee / (size / 1000)
       testFeePerKb(feePerKb, 7777)
     })
@@ -451,18 +455,34 @@ describe('the send builder', function () {
       // Here we'll test the edge case when a new utxo is needed to pay for fees,
       // and the new utxo increas the fee so another utxo is needed
       var args = clone(sendArgs)
-      addUtxos(args, 2)
-      // TODO: modify u.value in order to trigger the cycle
+      addUtxos(args, 2, true)
+      args.utxos[0].value = 1400
+      args.utxos[1].value = 1500
+      args.utxos[2].value = 1600
+      delete args.fee
       args.feePerKb = 7777
       var result = await ccb.buildSendTransaction(args)
-      // TODO: some type of checks on result
+      var sumValueInputs = 0
+      var tx = Transaction.fromHex(result.txHex)
+      tx.ins.forEach((input) => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var fee = sumValueInputs - sumValueOutputs
+      assert.ok(fee >= 0, 'Fee is a natural number: ' + fee)
+      var size = Math.round(result.txHex.length / 2)
+      var feePerKb = fee / (size / 1000)
+      testFeePerKb(feePerKb, args.feePerKb)
+    })
+    it('fails creating tx do to fees', async function() {
+
     })
     it('raises an error on too low fees', async function() {
       var args = clone(sendArgs)
       args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
       delete args.fee
       args.feePerKb = 77
-      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /A meaningful request/)
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /"feePerKb" is too low/)
     })
   })
 })
