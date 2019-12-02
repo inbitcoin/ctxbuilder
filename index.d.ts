@@ -12,6 +12,7 @@ declare module '@inbitcoin/ctxbuilder' {
       changeAddress: string | (() => Promise<string>)
       bitcoinChangeAddress?: string | (() => Promise<string>)
       fee?: number
+      feePerKb?: number
     }): ICapiBuiltTransaction
 
     public buildIssueTransaction(args: {
@@ -24,6 +25,7 @@ declare module '@inbitcoin/ctxbuilder' {
       changeAddress: string | (() => Promise<string>)
       bitcoinChangeAddress?: string | (() => Promise<string>)
       fee?: number
+      feePerKb?: number
     }): ICapiBuiltIssueTransaction
   }
 
