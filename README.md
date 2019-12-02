@@ -57,14 +57,9 @@ If `properties` is specified, then the default properties will be overridden.
 ```
 {
   network: String,              // Which blockchain network should be used ('testnet' or 'mainnet', default='mainnet')
-  defaultFee: Number,           // Transaction miner fee, fixed (default=null)
-  defaultFeePerKb: Number,      // Transaction miner fee, per Kb (default=null)
   minDustValue: Number,         // Minimum value to put in each output, in satoshi (except for OP_RETURN, default=600)
 }
 ```
-
-**Note:** only one of `defaultFee` and `defaultFeePerKb` can provided.
-If none of them is provided, `fee` will be mandatory in each API call.
 
 ### `builder.buildIssueTransaction(args)`
 
@@ -81,7 +76,7 @@ Build an issuance transaction.
     - `hex`            String, the UTXO's locking script hex.
 - `issueAddress`       String, the Base58Check Bitcoin (or testnet) address which issues the asset, **required**.
 - `amount`             Number, amount of units of the asset to issue, **required**.
-- `fee`                Number, transaction miner fee in satoshi, **required** (unless constructed with one of `defaultFee` and `defaultFeePerKb`.
+- `fee`                Number, transaction miner fee in satoshi, **required**.
 - `divisibility`       Number, how small is the smallest subdivision of the asset, calculated as 10^(-divisibility) (default=0).
 - `lockStatus`         Boolean, is the issued asset locked (can't be reissued) or unlocked (default=true).
 - `transfer`           Object[], array of transfer objects, each consists of:

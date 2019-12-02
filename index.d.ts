@@ -2,8 +2,6 @@ declare module '@inbitcoin/ctxbuilder' {
   class ColoredCoinsBuilder {
     constructor(properties: {
       network: "mainnet" | "testnet" | "regtest";
-      defaultFee?: number;
-      defaultFeePerKb?: number;
       minDustValue?: number;
       softMaxUtxos?: number;
     })
@@ -14,8 +12,9 @@ declare module '@inbitcoin/ctxbuilder' {
       changeAddress: string | (() => Promise<string>)
       bitcoinChangeAddress?: string | (() => Promise<string>)
       fee?: number
-      defaultFee?: number
+      feePerKb?: number
     }): ICapiBuiltTransaction
+
     public buildIssueTransaction(args: {
       utxos: Array<ICapiUtxo>
       issueAddress?: string
@@ -26,7 +25,7 @@ declare module '@inbitcoin/ctxbuilder' {
       changeAddress: string | (() => Promise<string>)
       bitcoinChangeAddress?: string | (() => Promise<string>)
       fee?: number
-      defaultFee?: number
+      feePerKb?: number
     }): ICapiBuiltIssueTransaction
   }
 
