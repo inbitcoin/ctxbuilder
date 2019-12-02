@@ -21,9 +21,7 @@ var ColoredCoinsBuilder = function (properties) {
     throw new Error('Some properties are not supported anymore')
   }
   this.network = properties.network || 'mainnet' // 'testnet' or 'mainnet'
-
-  this.defaultFeePerKb = parseInt(properties.defaultFeePerKb) || 25000
-
+  
   this.minDustValue = parseInt(properties.minDustValue) || 600
 
   this.softMaxUtxos = parseInt(properties.softMaxUtxos) || 666
@@ -272,10 +270,9 @@ ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
 
   debug('encoding done, buffer: ', buffer)
   if (buffer.leftover && buffer.leftover.length > 0) {
-    encoder.shiftOutputs()
-    buffer = encoder.encode()
-    addMultisig = true
-    reedemScripts.forEach(function (item) { item.index += 1 })
+    // We don't expect to enter here
+    debug('Unsupported feature')
+    throw new errors.CCTransactionConstructionError()
   }
   var ret = bitcoinjs.script.compile([
     bitcoinjs.opcodes.OP_RETURN,
@@ -288,17 +285,6 @@ ColoredCoinsBuilder.prototype._encodeColorScheme = function (args) {
   encoder.payments.forEach(function (payment) {
     coloredOutputIndexes.push(payment.output)
   })
-
-  // need to encode hashes in first tx
-  if (addMultisig) {
-    if (buffer.leftover && buffer.leftover.length === 1) {
-      self._addHashesOutput(txb.tx, args.pubKeyReturnMultisigDust, buffer.leftover[0])
-    } else if (buffer.leftover && buffer.leftover.length === 2) {
-      self._addHashesOutput(txb.tx, args.pubKeyReturnMultisigDust, buffer.leftover[1], buffer.leftover[0])
-    } else {
-      throw new Error('enough room for hashes: we offsetted inputs for nothing')
-    }
-  }
 
   // add change
   var allOutputValues = _.sumBy(txb.tx.outs, function (output) { return output.value })
@@ -350,38 +336,6 @@ ColoredCoinsBuilder.prototype._generateMultisigAddress = function (pubKeys, m) {
   var multisigAdress = new bitcoinjs.Address(hash, (self.network === 'testnet') ? 0xc4 : 0x05)
   var sendto = multisigAdress.toBase58Check()
   return { address: sendto, reedemScript: script.toHex() }
-}
-
-ColoredCoinsBuilder.prototype._addHashesOutput = function (tx, address, sha2, sha1) {
-  var self = this
-  var chunks = []
-  chunks.push(bitcoinjs.opcodes.OP_1)
-  chunks.push(address ? new Buffer(address, 'hex') : new Buffer('03ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', 'hex'))
-  chunks.push(Buffer.concat([new Buffer('03', 'hex'), sha2], 33))
-  if (sha1) {
-    chunks.push(Buffer.concat([new Buffer('030000000000000000000000', 'hex'), sha1], 33))
-    chunks.push(bitcoinjs.opcodes.OP_3)
-  } else {
-    chunks.push(bitcoinjs.opcodes.OP_2)
-  }
-  chunks.push(bitcoinjs.opcodes.OP_CHECKMULTISIG)
-
-  debug('chunks', chunks)
-
-  var script = bitcoinjs.script.compile(chunks)
-
-  // try compute value to pass mindust
-  // TODO: actually comput it with the fee from the api request, this assumes static fee per kb
-  tx.outs.unshift({ script: script, value: self._getNoneMinDustByScript(script) })
-}
-
-/** This compute the minDustFee and multipy it for defaultFeePerSat.
- *  I don't know why
- */
-ColoredCoinsBuilder.prototype._getNoneMinDustByScript = function (script) {
-  var self = this
-  // add 9 to aacount for bitcoind SER_DISK serilaztion before the multiplication
-  return (((self.defaultFeePerKb * (script.length + 148 + 9)) / 1000) * 3)
 }
 
 function isInputInTx (tx, txid, index) {
@@ -626,7 +580,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
   var buffer = encoder.encode()
   if (buffer.leftover && buffer.leftover.length > 0) {
     // We don't expect to enter here
-    // Unsupported feature
+    debug('Unsupported feature')
     throw new errors.CCTransactionConstructionError()
   }
 

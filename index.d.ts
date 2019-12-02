@@ -3,7 +3,6 @@ declare module '@inbitcoin/ctxbuilder' {
     constructor(properties: {
       network: "mainnet" | "testnet" | "regtest";
       defaultFee?: number;
-      defaultFeePerKb?: number;
       minDustValue?: number;
       softMaxUtxos?: number;
     })
