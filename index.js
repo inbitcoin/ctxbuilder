@@ -651,7 +651,6 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     if (numOfChanges === 2) {
       btcChangeValue = lastOutputValue - self.minDustValue
       lastOutputValue = self.minDustValue
-      // TODO: test btcChangeValue > minDustValue
     }
 
     async function resolveAddress(object, placeholderId) {
