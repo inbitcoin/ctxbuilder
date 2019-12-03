@@ -544,6 +544,46 @@ describe('the send builder', function () {
     assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
     assert.deepEqual(result.coloredOutputIndexes, [0])
   })
+  describe('magic selector', async function() {
+    const magicOutputSelector = 8212
+
+    it('fails if the only finance utxo is magic', async function() {
+      var args = clone(sendArgs)
+      args.fee = 100000
+      addUtxos(args, 1, true)
+      args.utxos[0].value = magicOutputSelector
+      args.utxos[1].value = magicOutputSelector * 15  // 123180
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Not enough satoshi to cover transaction/)
+    })
+    it('works if the only finance utxo is magic and the asset utxo can pay enough', async function() {
+      var args = clone(sendArgs)
+      args.fee = 100000
+      addUtxos(args, 1, true)
+      args.utxos[0].value = magicOutputSelector * 15  // 123180
+      args.utxos[1].value = magicOutputSelector * 15  // 123180
+      const result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 1)  // utxo with assets
+      assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
+    })
+    it('the transaction does not cointain magic inputs', async function() {
+      var args = clone(sendArgs)
+      args.fee = 100000
+      addUtxos(args, 4, true)
+      args.utxos[0].value = 600
+      args.utxos[1].value = magicOutputSelector * 2      // magic: 16424
+      args.utxos[2].value = magicOutputSelector * 3 + 1  // muggle: 24637
+      args.utxos[3].value = magicOutputSelector * 15     // magic: 123180
+      args.utxos[4].value = 77000                        // muggle
+      const result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 3)  // utxo with assets, 2 muggle utxos
+      const inputsIndexes = _.map(tx.ins, 'index')
+      assert.deepEqual(inputsIndexes, [0, 2, 4])
+    })
+  })
 })
 
 var burnArgs = {

@@ -9,6 +9,8 @@ var debug = require('debug')('cc-transaction-builder')
 var errors = require('@inbitcoin/cerrors')
 var bufferReverse = require('buffer-reverse')
 
+const magicOutputSelector = 8212
+
 var CC_TX_VERSION = 0x02
 
 var ColoredCoinsBuilder = function (properties) {
@@ -347,6 +349,7 @@ function isInputInTx (tx, txid, index) {
 
 /**
  * Add all the utxos until they are not enough
+ * Magic outputs are not selected
  * Fields updated by the function:
  * - inputsValue
  * - metadata
@@ -359,10 +362,18 @@ ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function (utxos, txb
   var financeValue = new BigNumber(0)
   var currentAmount = new BigNumber(0)
 
+  function isMagicValue(value) {
+    return value % magicOutputSelector === 0
+  }
+
   // Add all the utxos until they are not enough
   var hasEnoughEquity = utxos.some(function (utxo) {
     utxo.value = Math.round(utxo.value)
-    if (!isInputInTx(txb.tx, utxo.txid, utxo.index) && !(utxo.assets && utxo.assets.length)) {
+    // not an input yet && no assets && no magic value
+    const isInput = isInputInTx(txb.tx, utxo.txid, utxo.index)
+    const hasAssets = utxo.assets && utxo.assets.length
+    const isMagic = isMagicValue(utxo.value)
+    if (!isInput && !hasAssets && !isMagic) {
       debug('2. current amount ' + utxo.value + ' needed ' + missing)
       debug('add input: ' + utxo.txid + ':' + utxo.index)
       txb.addInput(utxo.txid, utxo.index)
