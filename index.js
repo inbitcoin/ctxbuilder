@@ -21,7 +21,7 @@ var ColoredCoinsBuilder = function (properties) {
     throw new Error('Some properties are not supported anymore')
   }
   this.network = properties.network || 'mainnet' // 'testnet' or 'mainnet'
-  
+
   this.minDustValue = parseInt(properties.minDustValue) || 600
 
   this.softMaxUtxos = parseInt(properties.softMaxUtxos) || 666
@@ -424,7 +424,7 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
 
   var txb = new bitcoinjs.TransactionBuilder(self.network === 'testnet' ? bitcoinjs.networks.testnet : bitcoinjs.networks.bitcoin)
 
-  return await self._addInputsForSendTransaction(txb, args)
+  return self._addInputsForSendTransaction(txb, args)
 }
 
 ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
@@ -654,27 +654,31 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
       // TODO: test btcChangeValue > minDustValue
     }
 
+    async function resolveAddress(object, placeholderId) {
+      if (typeof object === 'function') {
+        return object()
+      }
+      if (object === 'placeholder') {
+        return self.getPlaceholderAddress(placeholderId)
+      }
+      return object
+    }
+
     if (numOfChanges === 2 || !coloredChange) {
       // Add btc
-      if (typeof args.bitcoinChangeAddress === 'function') {
-        builder.addOutput(await args.bitcoinChangeAddress(), btcChangeValue)
-      } else {
-        if (args.bitcoinChangeAddress == 'placeholder') {
-          args.bitcoinChangeAddress = self.getPlaceholderAddress(1)
-        }
+      // use btc change if it is defined, instead use the change address
+      if (args.bitcoinChangeAddress) {
+        args.bitcoinChangeAddress = await resolveAddress(args.bitcoinChangeAddress, 1)
         builder.addOutput(args.bitcoinChangeAddress, btcChangeValue)
+      } else {
+        args.changeAddress = await resolveAddress(args.changeAddress, 2)
+        builder.addOutput(args.changeAddress, btcChangeValue)
       }
     }
     if (coloredChange) {
       coloredOutputIndexes.push(builder.tx.outs.length)
-      if (typeof args.changeAddress === 'function') {
-        builder.addOutput(await args.changeAddress(), lastOutputValue)
-      } else {
-        if (args.changeAddress == 'placeholder') {
-          args.changeAddress = self.getPlaceholderAddress(2)
-        }
-        builder.addOutput(args.changeAddress, lastOutputValue)
-      }
+      args.changeAddress = await resolveAddress(args.changeAddress, 2)
+      builder.addOutput(args.changeAddress, lastOutputValue)
     }
     var hex = builder.tx.toHex()
     txLen = Math.round(hex.length / 2)

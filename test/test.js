@@ -421,6 +421,26 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
     assert.equal(outputScriptToAddress(tx.outs[3].script), sendArgs.changeAddress, 'assets change')
   })
+  it('works if there is no colored change but bitcoinChangeAddress is not defined', async function() {
+    /* case:
+      *  - no bitcoinChangeAddress provided
+      *  - no asset change
+      *  - bitcoin change
+      * what we expect:
+      *  - all the change into args.changeAddress
+      */
+    var args = clone(sendArgs)
+    args.utxos[0].assets[0].amount = 1
+    args.to[0].amount = 1
+    // NO: args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+
+    const result = await ccb.buildSendTransaction(args)
+
+    const tx = Transaction.fromHex(result.txHex)
+    assert.equal(outputScriptToAddress(tx.outs[2].script), args.changeAddress)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + btc change
+    assert.deepEqual(result.coloredOutputIndexes, [0])
+  })
   describe('feePerKb', async function() {
 
     function testFeePerKb(actual, expected) {
@@ -474,8 +494,17 @@ describe('the send builder', function () {
       var feePerKb = fee / (size / 1000)
       testFeePerKb(feePerKb, args.feePerKb)
     })
-    it('fails creating tx do to fees', async function() {
-
+    it('fails creating tx due to fees', async function() {
+      var args = clone(sendArgs)
+      addUtxos(args, 2, true)
+      // required input: 3379
+      // provided: 1127+1126+1125 -> 3378
+      args.utxos[0].value = 1127
+      args.utxos[1].value = 1126
+      args.utxos[2].value = 1125
+      delete args.fee
+      args.feePerKb = 10000
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Not enough satoshi to cover transaction/)
     })
     it('raises an error on too low fees', async function() {
       var args = clone(sendArgs)
@@ -484,6 +513,20 @@ describe('the send builder', function () {
       args.feePerKb = 77
       await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /"feePerKb" is too low/)
     })
+  })
+  it('works with several inputs', async function() {
+    var args = clone(sendArgs)
+    var n = 5000
+    args.utxos[0].assets[0].amount = 1
+    addUtxos(args, n-1, false)
+    args.to[0].amount = n
+
+    const result = await ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, n)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
+    assert.deepEqual(result.coloredOutputIndexes, [0])
   })
 })
 
