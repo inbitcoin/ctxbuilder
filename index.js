@@ -21,7 +21,7 @@ var ColoredCoinsBuilder = function (properties) {
     throw new Error('Some properties are not supported anymore')
   }
   this.network = properties.network || 'mainnet' // 'testnet' or 'mainnet'
-  
+
   this.minDustValue = parseInt(properties.minDustValue) || 600
 
   this.softMaxUtxos = parseInt(properties.softMaxUtxos) || 666
@@ -424,7 +424,7 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
 
   var txb = new bitcoinjs.TransactionBuilder(self.network === 'testnet' ? bitcoinjs.networks.testnet : bitcoinjs.networks.bitcoin)
 
-  return await self._addInputsForSendTransaction(txb, args)
+  return self._addInputsForSendTransaction(txb, args)
 }
 
 ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
