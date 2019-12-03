@@ -505,6 +505,20 @@ describe('the send builder', function () {
       await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /"feePerKb" is too low/)
     })
   })
+  it('works with several inputs', async function() {
+    var args = clone(sendArgs)
+    var n = 5000
+    args.utxos[0].assets[0].amount = 1
+    addUtxos(args, n-1, false)
+    args.to[0].amount = n
+
+    const result = await ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, n)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
+    assert.deepEqual(result.coloredOutputIndexes, [0])
+  })
 })
 
 var burnArgs = {
