@@ -494,8 +494,17 @@ describe('the send builder', function () {
       var feePerKb = fee / (size / 1000)
       testFeePerKb(feePerKb, args.feePerKb)
     })
-    it('fails creating tx do to fees', async function() {
-
+    it('fails creating tx due to fees', async function() {
+      var args = clone(sendArgs)
+      addUtxos(args, 2, true)
+      // required input: 3379
+      // provided: 1127+1126+1125 -> 3378
+      args.utxos[0].value = 1127
+      args.utxos[1].value = 1126
+      args.utxos[2].value = 1125
+      delete args.fee
+      args.feePerKb = 10000
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Not enough satoshi to cover transaction/)
     })
     it('raises an error on too low fees', async function() {
       var args = clone(sendArgs)
