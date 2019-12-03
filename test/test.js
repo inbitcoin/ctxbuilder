@@ -421,6 +421,26 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), btcAddr, 'bitcoin change')
     assert.equal(outputScriptToAddress(tx.outs[3].script), sendArgs.changeAddress, 'assets change')
   })
+  it('works if there is no colored change but bitcoinChangeAddress is not defined', async function() {
+    /* case:
+      *  - no bitcoinChangeAddress provided
+      *  - no asset change
+      *  - bitcoin change
+      * what we expect:
+      *  - all the change into args.changeAddress
+      */
+    var args = clone(sendArgs)
+    args.utxos[0].assets[0].amount = 1
+    args.to[0].amount = 1
+    // NO: args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+
+    const result = await ccb.buildSendTransaction(args)
+
+    const tx = Transaction.fromHex(result.txHex)
+    assert.equal(outputScriptToAddress(tx.outs[2].script), args.changeAddress)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + btc change
+    assert.deepEqual(result.coloredOutputIndexes, [0])
+  })
   describe('feePerKb', async function() {
 
     function testFeePerKb(actual, expected) {
