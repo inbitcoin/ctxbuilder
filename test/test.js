@@ -306,6 +306,22 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress, 'assets change')
   })
 
+  it('should have only asset change because the btc change is too small', async function () {
+    var args = clone(sendArgs)
+    var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+    args.bitcoinChangeAddress = btcAddr
+    // Spend all in fees
+    args.fee = args.utxos[0].value - (2 * 600 + 100)
+    var result = await ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    var tx = Transaction.fromHex(result.txHex)
+    assert.equal(tx.ins.length, 1)
+    assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + assets change
+    assert.ok(tx.outs[2].value === 600 + 100, 'some satoshis are added to the asset change address')
+    assert.deepEqual(result.coloredOutputIndexes, [0, 2])
+    assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress, 'assets change')
+  })
+
   it('should have only bitcoin change', async function () {
     var args = clone(sendArgs)
     var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
