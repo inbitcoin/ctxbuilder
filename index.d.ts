@@ -1,35 +1,41 @@
 declare module '@inbitcoin/ctxbuilder' {
   class ColoredCoinsBuilder {
-    constructor(properties: {
-      network: "mainnet" | "testnet" | "regtest";
-      minDustValue?: number;
-      softMaxUtxos?: number;
-    })
+    constructor(properties: IBuilderArgs)
 
-    public buildSendTransaction(args: {
-      utxos: Array<ICapiUtxo>
-      to: Array<{ address: string; amount: number }>
-      changeAddress: string | (() => Promise<string>)
-      bitcoinChangeAddress?: string | (() => Promise<string>)
-      fee?: number
-      feePerKb?: number
-    }): ICapiBuiltTransaction
+    public buildSendTransaction(args: IBuilderArgsSend): ICapiBuiltTransaction
 
-    public buildIssueTransaction(args: {
-      utxos: Array<ICapiUtxo>
-      issueAddress?: string
-      amount: number
-      divisibility?: number
-      aggregationPolicy?: string
-      to?: Array<{ address: string; amount: number }>
-      changeAddress: string | (() => Promise<string>)
-      bitcoinChangeAddress?: string | (() => Promise<string>)
-      fee?: number
-      feePerKb?: number
-    }): ICapiBuiltIssueTransaction
+    public buildIssueTransaction(args: IBuilderArgsIssue): ICapiBuiltIssueTransaction
   }
 
   export = ColoredCoinsBuilder
+}
+
+declare interface IBuilderArgs {
+  network: "mainnet" | "testnet" | "regtest";
+  minDustValue?: number;
+  softMaxUtxos?: number;
+}
+
+declare interface IBuilderArgsSend {
+  utxos: Array<ICapiUtxo>
+  to: Array<{ address: string; amount: number }>
+  changeAddress: string | (() => Promise<string>)
+  bitcoinChangeAddress?: string | (() => Promise<string>)
+  fee?: number
+  feePerKb?: number
+}
+
+declare interface IBuilderArgsIssue {
+  utxos: Array<ICapiUtxo>
+  issueAddress?: string
+  amount: number
+  divisibility?: number
+  aggregationPolicy?: string
+  to?: Array<{ address: string; amount: number }>
+  changeAddress: string | (() => Promise<string>)
+  bitcoinChangeAddress?: string | (() => Promise<string>)
+  fee?: number
+  feePerKb?: number
 }
 
 declare interface ICapiBuiltTransaction {
