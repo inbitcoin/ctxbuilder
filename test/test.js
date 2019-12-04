@@ -10,6 +10,8 @@ var script = bitcoinjs.script
 var CC = require('cc-transaction')
 var _ = require('lodash')
 
+const P2PKH_SCRIPTSIG_SIZE = 107
+
 /* Tests utils */
 function outputScriptToAddress(script) {
   return bitcoinjs.address.fromOutputScript(script, bitcoinjs.networks.testnet)
@@ -483,8 +485,9 @@ describe('the send builder', function () {
       })
       var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
       var fee = sumValueInputs - sumValueOutputs
-      var size = Math.round(result.txHex.length / 2)
-      var feePerKb = fee / (size / 1000)
+      const unsignedSize = Math.round(result.txHex.length / 2)
+      const signedSize = unsignedSize + tx.ins.length * P2PKH_SCRIPTSIG_SIZE
+      var feePerKb = fee / (signedSize / 1000)
       testFeePerKb(feePerKb, 7777)
     })
     it('works with bitcoin dust inputs', async function() {

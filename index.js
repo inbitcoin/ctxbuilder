@@ -10,8 +10,8 @@ var errors = require('@inbitcoin/cerrors')
 var bufferReverse = require('buffer-reverse')
 
 const magicOutputSelector = 8212
-
-var CC_TX_VERSION = 0x02
+const P2PKH_SCRIPTSIG_SIZE = 107
+const CC_TX_VERSION = 0x02
 
 var ColoredCoinsBuilder = function (properties) {
   properties = properties || {}
@@ -690,8 +690,9 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
       args.changeAddress = await resolveAddress(args.changeAddress, 2)
       builder.addOutput(args.changeAddress, lastOutputValue)
     }
-    var hex = builder.tx.toHex()
-    txLen = Math.round(hex.length / 2)
+    const unsignedTxHex = builder.tx.toHex()
+    const unsignedLen = Math.round(unsignedTxHex.length / 2)
+    const txLen = unsignedLen + builder.tx.ins.length * P2PKH_SCRIPTSIG_SIZE
     if (args.feePerKb) {
       // Is the fee rate correct?
       var realFeePerKb = args.fee / txLen * 1000
@@ -705,7 +706,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
       }
     }
     debug('success')
-    return { txHex: hex, coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
+    return { txHex: unsignedTxHex, coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
   }
 }
 
