@@ -2,9 +2,9 @@ declare module '@inbitcoin/ctxbuilder' {
   class ColoredCoinsBuilder {
     constructor(properties: IBuilderArgs)
 
-    public buildSendTransaction(args: IBuilderArgsSend): ICapiBuiltTransaction
+    public buildSendTransaction(args: IBuilderArgsSend): Promise<ICapiBuiltTransaction>
 
-    public buildIssueTransaction(args: IBuilderArgsIssue): ICapiBuiltIssueTransaction
+    public buildIssueTransaction(args: IBuilderArgsIssue): Promise<ICapiBuiltIssueTransaction>
   }
 
   export = ColoredCoinsBuilder
