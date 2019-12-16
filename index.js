@@ -10,8 +10,22 @@ var errors = require('@inbitcoin/cerrors')
 var bufferReverse = require('buffer-reverse')
 
 const magicOutputSelector = 8212
-const P2PKH_SCRIPTSIG_SIZE = 107
 const CC_TX_VERSION = 0x02
+
+// Scripts sizes
+//
+// sig length: 6           +32 +33 +1 = 72
+//             DER header  s   r   sig type
+const P2PKH_SCRIPTSIG_SIZE = 107
+// P2WPKH nested
+const P2SH_SEGWIT_SIG_SIZE = 50  // 23 + ceil(107/4)
+// scriptSig: 23 = 1     +1       +1    +20
+//                 push  version  push  pubkey hash
+// <0 <20-byte-key-hash>>
+// witness: 107 = 1+72+1+33
+// <signature> <pubkey>
+const P2PK_SIG_SIZE = 73  // 1 (push opcode) +72
+
 
 var ColoredCoinsBuilder = function (properties) {
   properties = properties || {}
@@ -674,6 +688,66 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
       return object
     }
 
+    function b2a_hash(hash) {
+      return hash.toString('hex').match(/.{2}/g).reverse().join("")
+    }
+
+    function _getInputScriptsVirtualLenFromScriptPubKey(scriptPubKey) {
+      // P2PKH
+      // 76a9140e8fffc70907a025e65f0bdbc5ec6bb2d326d3a788ac
+      // 76a914xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx88ac
+      if (Boolean(scriptPubKey.match(/76a914[a-f0-9]{40}88ac/))) {
+        return P2PKH_SCRIPTSIG_SIZE
+      }
+      // P2SH (assume nested segwit )
+      // a91407e8a3eaf30ffec25e0a2234783e2fd235d0250187
+      // a914xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx87
+      if (Boolean(scriptPubKey.match(/a914[a-f0-9]{40}87/))) {
+        return P2SH_SEGWIT_SIG_SIZE
+      }
+      // P2PK
+      // 2102fe4bde2c1a5c2b4cfba984f3a6c32c5cb5e8f835c7f23b5a7ab80c848df3cfa9ac
+      // 21xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxac
+      if (Boolean(scriptPubKey.match(/21[a-f0-9]{66}ac/))) {
+        return P2PK_SIG_SIZE
+      }
+      throw new Error('scriptPubKey not supported: ' + scriptPubKey)
+    }
+
+    function getInputScriptsVirtualLen(inputs, utxos, scriptsCache) {
+      scriptsCache = scriptsCache || {}
+      var vBytes = 0
+      // scriptsCache: map `${txid}:${index}` -> hex script
+      for (var i in inputs) {
+        const txid = b2a_hash(inputs[i].hash)
+        const index = inputs[i].index
+
+        // test cache
+        if (scriptsCache[`${txid}:${index}`]) {
+          // hit
+        } else {
+          // missed
+          for (var u in utxos) {
+            const utxo = utxos[u]
+            if (txid === utxo.txid && index === utxo.index) {
+              // input found
+              // add to cache
+              scriptsCache[`${txid}:${index}`] = utxo.scriptPubKey.hex
+              break
+            }
+          }
+        }
+
+        const scriptPubKey = scriptsCache[`${txid}:${index}`]
+        if (!scriptPubKey) {
+          throw new Error('inputs and utxos inconsistency')
+        }
+
+        vBytes += _getInputScriptsVirtualLenFromScriptPubKey(scriptPubKey)
+      }
+      return vBytes
+    }
+
     if (numOfChanges === 2 || !coloredChange) {
       // Add btc
       // use btc change if it is defined, instead use the change address
@@ -692,15 +766,15 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     }
     const unsignedTxHex = builder.tx.toHex()
     const unsignedLen = Math.round(unsignedTxHex.length / 2)
-    const txLen = unsignedLen + builder.tx.ins.length * P2PKH_SCRIPTSIG_SIZE
+    const txVLen = unsignedLen + getInputScriptsVirtualLen(builder.tx.ins, args.utxos)
     if (args.feePerKb) {
       // Is the fee rate correct?
-      var realFeePerKb = args.fee / txLen * 1000
+      var realFeePerKb = args.fee / txVLen * 1000
       if (realFeePerKb < args.feePerKb) {
         // Retry!
         debug('Current args.fee = ' + args.fee + ' feePerKb = ' + realFeePerKb)
-        debug('Wanted feePerKb = ' + args.feePerKb + ' txLen = ' + txLen)
-        args.fee = Math.ceil(txLen / 1000 * args.feePerKb)
+        debug('Wanted feePerKb = ' + args.feePerKb + ' txVLen = ' + txVLen)
+        args.fee = Math.ceil(txVLen / 1000 * args.feePerKb)
         debug('Insufficient fee rate, retry with new fee = ' + args.fee)
         continue
       }
