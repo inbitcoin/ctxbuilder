@@ -535,7 +535,7 @@ describe('the send builder', function () {
   })
   it('works with several inputs', async function() {
     var args = clone(sendArgs)
-    var n = 5000
+    var n = 1000
     args.utxos[0].assets[0].amount = 1
     addUtxos(args, n-1, false)
     args.to[0].amount = n
