@@ -10,7 +10,11 @@ var script = bitcoinjs.script
 var CC = require('cc-transaction')
 var _ = require('lodash')
 
+// redefinition of constants
 const P2PKH_SCRIPTSIG_SIZE = 107
+const P2SH_SEGWIT_SIG_SIZE = 50
+const P2WPKH_SIG_SIZE = null  // TODO
+const P2PK_SIG_SIZE = 73
 
 /* Tests utils */
 function outputScriptToAddress(script) {
@@ -111,6 +115,18 @@ describe('the issue builder', function () {
     assert.deepEqual(result.coloredOutputIndexes, [1])
   })
 })
+
+const p2shSegwitScriptPubKey = {
+  hex: 'a91407e8a3eaf30ffec25e0a2234783e2fd235d0250187',
+  addresses: ['2Msy3QkwgBpqQVuYMxG8UYLa4bBawAyf6a2']
+}
+
+const p2pkScriptPubKey = {
+  hex: '2102d0d196a577d46659660be9454c8599958f86e721853789a742dab16923438ac3ac',
+  addresses: []
+  // we do not have an address representation, but some implementations
+  // encoded them as legacy addresses. This is a bug
+}
 
 var sendArgs = {
   utxos: [
@@ -532,10 +548,57 @@ describe('the send builder', function () {
       args.feePerKb = 77
       await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /"feePerKb" is too low/)
     })
+    it('works if there are wrapper segwit inputs', async function() {
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      delete args.fee
+      args.utxos[0].scriptPubKey = clone(p2shSegwitScriptPubKey)
+      args.feePerKb = 7777
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 1)
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach((input) => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var fee = sumValueInputs - sumValueOutputs
+      const unsignedSize = Math.round(result.txHex.length / 2)
+      const signedSize = unsignedSize + tx.ins.length * P2SH_SEGWIT_SIG_SIZE
+      var feePerKb = fee / (signedSize / 1000)
+      testFeePerKb(feePerKb, 7777)
+    })
+    it('works if there are p2pk inputs', async function() {
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      delete args.fee
+      args.utxos[0].scriptPubKey = clone(p2pkScriptPubKey)
+      args.feePerKb = 7777
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 1)
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach((input) => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var fee = sumValueInputs - sumValueOutputs
+      const unsignedSize = Math.round(result.txHex.length / 2)
+      const signedSize = unsignedSize + tx.ins.length * P2PK_SIG_SIZE
+      var feePerKb = fee / (signedSize / 1000)
+      testFeePerKb(feePerKb, 7777)    })
   })
   it('works with several inputs', async function() {
     var args = clone(sendArgs)
-    var n = 5000
+    var n = 1000
     args.utxos[0].assets[0].amount = 1
     addUtxos(args, n-1, false)
     args.to[0].amount = n
