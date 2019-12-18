@@ -16,7 +16,7 @@
     "bitcoinjs-lib": "^3.0.2",
     "buffer-reverse": "^1.0.1",
     "cc-assetid-encoder": "^0.6.2",
-    "@inbitcoin/cerrors": "0.1.2",
+    "@inbitcoin/cerrors": "0.1.4",
     "cc-transaction": "^1.2.1",
     "debug": "^2.6.4",
     "lodash": "^4.17.4",

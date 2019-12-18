@@ -2,13 +2,13 @@
 # yarn lockfile v1
 
 
-"@inbitcoin/cerrors@0.1.2":
-  version "0.1.2"
-  resolved "https://browny.inbitcoin.it/@inbitcoin%2fcerrors/-/cerrors-0.1.2.tgz#2e6b76bf8e1e1396bcd4135a3fa7eac4f68b51a1"
-  integrity sha512-N0uue8r6RyGtv4TRp8iRt4U2q4TGH4Yzb0ItBDYF1k1/dxVSCN+uy2QwLYDIWt3k9uBsh774d5QkUH4RDPks4w==
+"@inbitcoin/cerrors@0.1.4":
+  version "0.1.4"
+  resolved "https://browny.inbitcoin.it/@inbitcoin%2fcerrors/-/cerrors-0.1.4.tgz#878ee286922b8fd8f44ed0236f80c10a8f0684a1"
+  integrity sha512-9zBwc9XEAoyw8lj9ddxsFoZcZYV4bF06sFnYqbUVUmQN4zigJiC7MXVpZpe7vcYBMvshANsQrI5w8BRrNhFlRg==
   dependencies:
     debug "^2.2.0"
-    errors "git+https://github.com/inbitcoin/errors-base.git#cef1462"
+    errors "git+https://github.com/inbitcoin/errors-base.git#43512dc"
     lodash "^4.14.0"
 
 acorn-jsx@^3.0.0:
@@ -595,9 +595,9 @@ error-ex@^1.3.1:
   dependencies:
     is-arrayish "^0.2.1"
 
-"errors@git+https://github.com/inbitcoin/errors-base.git#cef1462":
+"errors@git+https://github.com/inbitcoin/errors-base.git#43512dc":
   version "0.3.0"
-  resolved "git+https://github.com/inbitcoin/errors-base.git#cef1462656f867659a0f33683db9d2d2277220a1"
+  resolved "git+https://github.com/inbitcoin/errors-base.git#43512dc63779cb803796a6f1715ee11806e55af8"
 
 es-abstract@^1.5.1, es-abstract@^1.7.0:
   version "1.13.0"
