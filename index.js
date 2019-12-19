@@ -493,13 +493,10 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
 
   debug('addInputsForSendTransaction')
 
-  if (args.from) {
-    debug('got unspents for address: ' + args.from)
-  } else {
-    debug('got unspents from parmameter: ' + args.utxos)
-    if (args.utxos[0] && args.utxos[0].scriptPubKey && args.utxos[0].scriptPubKey.addresses && args.utxos[0].scriptPubKey.addresses[0]) {
-      args.from = args.utxos[0].scriptPubKey.addresses[0]
-    }
+  debug('got unspents from parmameter: ')
+  debug(args.utxos)
+  if (args.utxos[0] && args.utxos[0].scriptPubKey && args.utxos[0].scriptPubKey.addresses && args.utxos[0].scriptPubKey.addresses[0]) {
+    args.from = args.utxos[0].scriptPubKey.addresses[0]
   }
   var assetList = {}
   args.to.forEach(function (to) {
