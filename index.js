@@ -397,11 +397,9 @@ ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function (utxos, txb
         var chunks = bitcoinjs.script.decompile(new Buffer(utxo.scriptPubKey.hex, 'hex'))
         txb.tx.ins[txb.tx.ins.length - 1].script = bitcoinjs.script.compile(chunks)
       }
-      debug(txb.tx)
     }
     return currentAmount.comparedTo(missingbn) >= 0
   })
-
   debug('hasEnoughEquity: ' + hasEnoughEquity + ' missiyesg: ' + missing)
 
   return hasEnoughEquity
@@ -591,8 +589,6 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
       if (address.reedemScript) {
         reedemScripts.push({ index: txb.tx.outs.length - 1, reedemScript: address.reedemScript, address: address.address })
       }
-
-      debug(txb.tx)
       debug('adding output ' + (txb.tx.outs.length - 1))
     })
     debug('done adding colored outputs')
@@ -634,7 +630,9 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
     totalInputs.amount = baseInput
     // _computeCost use args.fee as parameter
     var satoshiCost = self._computeCost(true, args)
-    debug('New satoshiCost = ' + satoshiCost)
+    debug('New satoshiCost (fee + mandaroty output) = ' + satoshiCost)
+    debug('fee = ' + args.fee)
+    debug('assets only: tx.ins.length = ' + builder.tx.ins.length)
     if (!self._tryAddingInputsForFee(builder, args.utxos, totalInputs, args, satoshiCost)) {
       throw new errors.NotEnoughFundsError({
         type: 'transfer',
@@ -643,6 +641,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function (txb
         missing: satoshiCost - totalInputs.amount
       })
     }
+    debug('added fees: tx.ins.length = ' + builder.tx.ins.length)
 
     var lastOutputValue = self._getChangeAmount(builder.tx, args.fee, totalInputs)
     var coloredChange = _.keys(assetList).some(function (assetId) {
