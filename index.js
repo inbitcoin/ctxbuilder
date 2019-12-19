@@ -454,18 +454,17 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
 
 ColoredCoinsBuilder.prototype._computeCost = function (withfee, args) {
   var self = this
-  var fee = withfee ? args.fee : 0
+  var cost = withfee ? args.fee : 0
 
-  if (args.to && args.to.length) {
-    args.to.forEach(function (to) {
-      fee += self.minDustValue
-    })
+  if (args.to) {
+    cost += args.to.length * self.minDustValue
   }
 
-  fee += self.minDustValue
+  // count an asset change, the bitcoin change is not mandatory
+  cost += self.minDustValue
 
-  debug('comupteCost: ' + fee + ' outs.len = ' + args.to.length)
-  return fee
+  debug('comupteCost: ' + cost + ' outs.len = ' + args.to.length)
+  return cost
 }
 
 /** 1 minDustFee for each output + fee
