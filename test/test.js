@@ -511,9 +511,9 @@ describe('the send builder', function () {
       // and the new utxo increas the fee so another utxo is needed
       var args = clone(sendArgs)
       addUtxos(args, 2, true)
-      args.utxos[0].value = 1400
-      args.utxos[1].value = 1500
-      args.utxos[2].value = 1600
+      args.utxos[0].value = 1788
+      args.utxos[1].value = 2452
+      args.utxos[2].value = 1152
       delete args.fee
       args.feePerKb = 7777
       var result = await ccb.buildSendTransaction(args)
@@ -525,8 +525,9 @@ describe('the send builder', function () {
       var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
       var fee = sumValueInputs - sumValueOutputs
       assert.ok(fee >= 0, 'Fee is a natural number: ' + fee)
-      var size = Math.round(result.txHex.length / 2)
-      var feePerKb = fee / (size / 1000)
+      const unsignedSize = Math.round(result.txHex.length / 2)
+      const signedSize = unsignedSize + tx.ins.length * P2PKH_SCRIPTSIG_SIZE
+      var feePerKb = fee / (signedSize / 1000)
       testFeePerKb(feePerKb, args.feePerKb)
     })
     it('fails creating tx due to fees', async function() {
