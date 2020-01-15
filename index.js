@@ -439,6 +439,9 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function (args) {
   if (args.feePerKb && args.feePerKb < 1000) {
     throw new Error('"feePerKb" is too low')
   }
+  if (typeof args.changeAddress !== 'string' || typeof args.bitcoinChangeAddress !== 'string') {
+    throw new Error('"changeAddress and bitcoinChangeAddress must not be a string')
+  }
   checkNotSupportedArgs(args, 'send')
 
   if (args.fee) {
