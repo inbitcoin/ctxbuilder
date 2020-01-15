@@ -27,15 +27,16 @@ declare interface IBuilderArgsSend {
 
 declare interface IBuilderArgsIssue {
   utxos: Array<ICapiUtxo>
-  issueAddress?: string
+  issueAddress: string
   amount: number
   divisibility?: number
   aggregationPolicy?: string
-  to?: Array<{ address: string; amount: number }>
-  changeAddress: string | (() => Promise<string>)
-  bitcoinChangeAddress?: string | (() => Promise<string>)
-  fee?: number
-  feePerKb?: number
+  transfer?: Array<{ address: string; amount: number }>
+  change?: string
+  financeChangeAddress?: string
+  fee: number
+  reissuable?: boolean
+  flags?: any
 }
 
 declare interface ICapiBuiltTransaction {
