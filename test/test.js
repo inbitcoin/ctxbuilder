@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 var softMaxWalletUtxos = 3
 var ColoredCoinsBuilder = require('..')
-var ccb = new ColoredCoinsBuilder({network: 'testnet', softMaxUtxos: softMaxWalletUtxos})
+var ccb = new ColoredCoinsBuilder({ network: 'testnet', softMaxUtxos: softMaxWalletUtxos })
 var assert = require('assert')
 var clone = require('clone')
 var bitcoinjs = require('bitcoinjs-lib')
@@ -13,7 +13,7 @@ var _ = require('lodash')
 // redefinition of constants
 const P2PKH_SCRIPTSIG_SIZE = 107
 const P2SH_SEGWIT_SIG_SIZE = 50
-const P2WPKH_SIG_SIZE = null  // TODO
+const P2WPKH_SIG_SIZE = null // TODO
 const P2PK_SIG_SIZE = 73
 
 /* Tests utils */
@@ -23,57 +23,61 @@ function outputScriptToAddress(script) {
 
 // assert helper: I don't know why we need this
 async function assertThrowsAsync(fn, regExp) {
-  let f = () => {};
+  let f = () => {}
   try {
-    await fn();
-  } catch(e) {
-    f = () => {throw e};
+    await fn()
+  } catch (e) {
+    f = () => {
+      throw e
+    }
   } finally {
-    assert.throws(f, regExp);
+    assert.throws(f, regExp)
   }
 }
 
 var issueArgs = {
-  utxos: [{
-    txid: 'b757c9f200c8ccd937ad493b2d499364640c0e2bfc62f99ef9aec635b7ff3474',
-    index: 1,
-    value: 598595600,
-    scriptPubKey: {
-      addresses: ['mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY'],
-      hex: '76a91477c0232b1c5c77f90754c9a400b825547cc30ebd88ac'
+  utxos: [
+    {
+      txid: 'b757c9f200c8ccd937ad493b2d499364640c0e2bfc62f99ef9aec635b7ff3474',
+      index: 1,
+      value: 598595600,
+      scriptPubKey: {
+        addresses: ['mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY'],
+        hex: '76a91477c0232b1c5c77f90754c9a400b825547cc30ebd88ac'
+      }
     }
-  }],
+  ],
   issueAddress: 'mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY',
   amount: 3600,
   fee: 5000
 }
 
-describe('the issue builder', function () {
-  it('args must have utxos field', async function () {
+describe('the issue builder', function() {
+  it('args must have utxos field', async function() {
     var args = clone(issueArgs)
     delete args.utxos
     await assertThrowsAsync(async () => await ccb.buildIssueTransaction(args), /Must have "utxos"/)
   })
 
-  it('args must have fee field', async function () {
+  it('args must have fee field', async function() {
     var args = clone(issueArgs)
     delete args.fee
     await assertThrowsAsync(async () => await ccb.buildIssueTransaction(args), /Must have "fee"/)
   })
 
-  it('args must have issueAddress field', async function () {
+  it('args must have issueAddress field', async function() {
     var args = clone(issueArgs)
     delete args.issueAddress
     await assertThrowsAsync(async () => await ccb.buildIssueTransaction(args), /Must have "issueAddress"/)
   })
 
-  it('args must have amount field', async function () {
+  it('args must have amount field', async function() {
     var args = clone(issueArgs)
     delete args.amount
     await assertThrowsAsync(async () => await ccb.buildIssueTransaction(args), /Must have "amount"/)
   })
 
-  it('returns valid response with default values', async function () {
+  it('returns valid response with default values', async function() {
     var result = await ccb.buildIssueTransaction(issueArgs)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
@@ -82,7 +86,9 @@ describe('the issue builder', function () {
     assert(result.assetId)
     assert.deepEqual(result.coloredOutputIndexes, [2])
     var sumValueInputs = issueArgs.utxos[0].value
-    var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+    var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+      return output.value
+    })
     assert.equal(sumValueInputs - sumValueOutputs, issueArgs.fee)
     var opReturnScriptBuffer = script.decompile(tx.outs[0].script)[1]
     var ccTransaction = CC.fromHex(opReturnScriptBuffer)
@@ -94,9 +100,9 @@ describe('the issue builder', function () {
     assert.equal(ccTransaction.aggregationPolicy, 'aggregatable')
   })
 
-  it('on injectPreviousOutput returns previous output hex in inputs', async function () {
+  it('on injectPreviousOutput returns previous output hex in inputs', async function() {
     var args = clone(issueArgs)
-    args.flags = {injectPreviousOutput: true}
+    args.flags = { injectPreviousOutput: true }
     var result = await ccb.buildIssueTransaction(args)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
@@ -104,7 +110,7 @@ describe('the issue builder', function () {
     assert.equal(tx.ins[0].script.toString('hex'), args.utxos[0].scriptPubKey.hex)
   })
 
-  it('should split change', async function () {
+  it('should split change', async function() {
     var args = clone(issueArgs)
     args.financeChangeAddress = false
     var result = await ccb.buildIssueTransaction(args)
@@ -156,45 +162,45 @@ var sendArgs = {
       ]
     }
   ],
-  to: [{ address: 'mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY', amount: 20, assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j' }],
+  to: [
+    { address: 'mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY', amount: 20, assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j' }
+  ],
   changeAddress: 'mfuVBQVHpPGiVrAB6MoNaPjiiY1va7f4bc',
   fee: 5000
 }
 
-describe('the send builder', function () {
-
-  it('args must have utxos field', async function () {
+describe('the send builder', function() {
+  it('args must have utxos field', async function() {
     var args = clone(sendArgs)
     delete args.utxos
     await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must have "utxos"/)
   })
 
-  it('args must have to field', async function () {
+  it('args must have to field', async function() {
     var args = clone(sendArgs)
     delete args.to
     await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must have "to"/)
   })
 
-  it('args must have fee field', async function () {
+  it('args must have fee field', async function() {
     var args = clone(sendArgs)
     delete args.fee
     await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must have "fee" or "feePerKb"/)
   })
 
-  it('args must have fee field', async function () {
+  it('args must have fee field', async function() {
     var args = clone(sendArgs)
     args.feePerKb = 2200
     await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must not have "fee" and "feePerKb"/)
   })
-  
 
-  it('args must have changeAddress field', async function () {
+  it('args must have changeAddress field', async function() {
     var args = clone(sendArgs)
     delete args.changeAddress
     await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Must have "changeAddress"/)
   })
 
-  it('returns valid response with default values', async function () {
+  it('returns valid response with default values', async function() {
     var args = clone(sendArgs)
     var result = await ccb.buildSendTransaction(args)
     assert(result.txHex)
@@ -203,7 +209,9 @@ describe('the send builder', function () {
     assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
     assert.deepEqual(result.coloredOutputIndexes, [0, 2])
     var sumValueInputs = sendArgs.utxos[0].value
-    var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+    var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+      return output.value
+    })
     assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
     var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
     var ccTransaction = CC.fromHex(opReturnScriptBuffer)
@@ -215,7 +223,7 @@ describe('the send builder', function () {
     assert.equal(ccTransaction.payments[0].amount, sendArgs.to[0].amount)
   })
 
-  it('returns valid response with several outputs', async function () {
+  it('returns valid response with several outputs', async function() {
     var addresses = [
       'mtr98kany9G1XYNU74pRnfBQmaCg2FZLmc',
       'mtrD2mBMp93bc8SmMa9WK6tteUCtYEuQQz',
@@ -262,9 +270,9 @@ describe('the send builder', function () {
     Transaction.fromHex(result.txHex)
   })
 
-  it('on injectPreviousOutput returns previous output hex in inputs', async function () {
+  it('on injectPreviousOutput returns previous output hex in inputs', async function() {
     var args = clone(sendArgs)
-    args.flags = {injectPreviousOutput: true}
+    args.flags = { injectPreviousOutput: true }
     var result = await ccb.buildSendTransaction(args)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
@@ -272,7 +280,7 @@ describe('the send builder', function () {
     assert.equal(tx.ins[0].script.toString('hex'), args.utxos[0].scriptPubKey.hex)
   })
 
-  it('should not split change', async function () {
+  it('should not split change', async function() {
     var args = clone(sendArgs)
     var result = await ccb.buildSendTransaction(args)
     assert(result.txHex)
@@ -283,7 +291,7 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress)
   })
 
-  it('should split change', async function () {
+  it('should split change', async function() {
     var args = clone(sendArgs)
     var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
     args.bitcoinChangeAddress = btcAddr
@@ -297,10 +305,10 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[3].script), sendArgs.changeAddress, 'assets change')
   })
 
-  it('should accept placeholder changes addresses', async function () {
+  it('should accept placeholder changes addresses', async function() {
     var args = clone(sendArgs)
-    args.changeAddress = "placeholder"
-    args.bitcoinChangeAddress = "placeholder"
+    args.changeAddress = 'placeholder'
+    args.bitcoinChangeAddress = 'placeholder'
     var result = await ccb.buildSendTransaction(args)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
@@ -309,7 +317,7 @@ describe('the send builder', function () {
     assert.deepEqual(result.coloredOutputIndexes, [0, 3])
   })
 
-  it('should have only asset change', async function () {
+  it('should have only asset change', async function() {
     var args = clone(sendArgs)
     var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
     args.bitcoinChangeAddress = btcAddr
@@ -324,7 +332,7 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress, 'assets change')
   })
 
-  it('should have only asset change because the btc change is too small', async function () {
+  it('should have only asset change because the btc change is too small', async function() {
     var args = clone(sendArgs)
     var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
     args.bitcoinChangeAddress = btcAddr
@@ -340,7 +348,7 @@ describe('the send builder', function () {
     assert.equal(outputScriptToAddress(tx.outs[2].script), sendArgs.changeAddress, 'assets change')
   })
 
-  it('should have only bitcoin change', async function () {
+  it('should have only bitcoin change', async function() {
     var args = clone(sendArgs)
     var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
     args.bitcoinChangeAddress = btcAddr
@@ -356,7 +364,7 @@ describe('the send builder', function () {
   })
 
   function addUtxos(args, n, bitcoinOnly) {
-    for (var i=1; i<=n; i++) {
+    for (var i = 1; i <= n; i++) {
       args.utxos.push(clone(args.utxos[0]))
       args.utxos[i].index = i
       if (bitcoinOnly) {
@@ -366,7 +374,6 @@ describe('the send builder', function () {
   }
 
   describe('coin selection', function() {
-
     function expectedNumberOfUtxos(utxos, softMaxUtxos) {
       var overSize = utxos.length - softMaxUtxos
       if (overSize > 1) {
@@ -376,23 +383,24 @@ describe('the send builder', function () {
       }
     }
 
-     async function test(args) {
+    async function test(args) {
       var btcAddr = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
       args.bitcoinChangeAddress = btcAddr
       var result = await ccb.buildSendTransaction(args)
       assert(result.txHex)
       var tx = Transaction.fromHex(result.txHex)
       assert.ok(tx.ins.length)
-      if (tx.ins.length < expectedNumberOfUtxos(args.utxos, softMaxWalletUtxos))
-        assert.fail()
+      if (tx.ins.length < expectedNumberOfUtxos(args.utxos, softMaxWalletUtxos)) assert.fail()
       assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
       assert.deepEqual(result.coloredOutputIndexes, [0, 3])
       var sumValueInputs = 0
       // The vout of inputs define the binded utxo, because vouts are unique
-      tx.ins.forEach((input) => {
+      tx.ins.forEach(input => {
         sumValueInputs += args.utxos[input.index].value
       })
-      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
       assert.equal(sumValueInputs - sumValueOutputs, sendArgs.fee)
       var opReturnScriptBuffer = script.decompile(tx.outs[1].script)[1]
       var ccTransaction = CC.fromHex(opReturnScriptBuffer)
@@ -457,12 +465,12 @@ describe('the send builder', function () {
   })
   it('works if there is no colored change but bitcoinChangeAddress is not defined', async function() {
     /* case:
-      *  - no bitcoinChangeAddress provided
-      *  - no asset change
-      *  - bitcoin change
-      * what we expect:
-      *  - all the change into args.changeAddress
-      */
+     *  - no bitcoinChangeAddress provided
+     *  - no asset change
+     *  - bitcoin change
+     * what we expect:
+     *  - all the change into args.changeAddress
+     */
     var args = clone(sendArgs)
     args.utxos[0].assets[0].amount = 1
     args.to[0].amount = 1
@@ -476,7 +484,6 @@ describe('the send builder', function () {
     assert.deepEqual(result.coloredOutputIndexes, [0])
   })
   describe('feePerKb', async function() {
-
     function testFeePerKb(actual, expected) {
       var msg = '. actual = ' + actual + ' e expected = ' + expected
       assert.ok(actual >= expected, 'feePerKb is too low' + msg)
@@ -496,10 +503,12 @@ describe('the send builder', function () {
       assert.deepEqual(result.coloredOutputIndexes, [0, 3])
       // Compute the fees, check if they are correct
       var sumValueInputs = 0
-      tx.ins.forEach((input) => {
+      tx.ins.forEach(input => {
         sumValueInputs += args.utxos[input.index].value
       })
-      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
       var fee = sumValueInputs - sumValueOutputs
       const unsignedSize = Math.round(result.txHex.length / 2)
       const signedSize = unsignedSize + tx.ins.length * P2PKH_SCRIPTSIG_SIZE
@@ -519,10 +528,12 @@ describe('the send builder', function () {
       var result = await ccb.buildSendTransaction(args)
       var sumValueInputs = 0
       var tx = Transaction.fromHex(result.txHex)
-      tx.ins.forEach((input) => {
+      tx.ins.forEach(input => {
         sumValueInputs += args.utxos[input.index].value
       })
-      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
       var fee = sumValueInputs - sumValueOutputs
       assert.ok(fee >= 0, 'Fee is a natural number: ' + fee)
       const unsignedSize = Math.round(result.txHex.length / 2)
@@ -540,7 +551,10 @@ describe('the send builder', function () {
       args.utxos[2].value = 1125
       delete args.fee
       args.feePerKb = 10000
-      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Not enough satoshi to cover transaction/)
+      await assertThrowsAsync(
+        async () => await ccb.buildSendTransaction(args),
+        /Not enough satoshi to cover transaction/
+      )
     })
     it('raises an error on too low fees', async function() {
       var args = clone(sendArgs)
@@ -563,10 +577,12 @@ describe('the send builder', function () {
       assert.deepEqual(result.coloredOutputIndexes, [0, 3])
       // Compute the fees, check if they are correct
       var sumValueInputs = 0
-      tx.ins.forEach((input) => {
+      tx.ins.forEach(input => {
         sumValueInputs += args.utxos[input.index].value
       })
-      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
       var fee = sumValueInputs - sumValueOutputs
       const unsignedSize = Math.round(result.txHex.length / 2)
       const signedSize = unsignedSize + tx.ins.length * P2SH_SEGWIT_SIG_SIZE
@@ -587,21 +603,24 @@ describe('the send builder', function () {
       assert.deepEqual(result.coloredOutputIndexes, [0, 3])
       // Compute the fees, check if they are correct
       var sumValueInputs = 0
-      tx.ins.forEach((input) => {
+      tx.ins.forEach(input => {
         sumValueInputs += args.utxos[input.index].value
       })
-      var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
       var fee = sumValueInputs - sumValueOutputs
       const unsignedSize = Math.round(result.txHex.length / 2)
       const signedSize = unsignedSize + tx.ins.length * P2PK_SIG_SIZE
       var feePerKb = fee / (signedSize / 1000)
-      testFeePerKb(feePerKb, 7777)    })
+      testFeePerKb(feePerKb, 7777)
+    })
   })
   it('works with several inputs', async function() {
     var args = clone(sendArgs)
     var n = 1000
     args.utxos[0].assets[0].amount = 1
-    addUtxos(args, n-1, false)
+    addUtxos(args, n - 1, false)
     args.to[0].amount = n
 
     const result = await ccb.buildSendTransaction(args)
@@ -619,19 +638,22 @@ describe('the send builder', function () {
       args.fee = 100000
       addUtxos(args, 1, true)
       args.utxos[0].value = magicOutputSelector
-      args.utxos[1].value = magicOutputSelector * 15  // 123180
-      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /Not enough satoshi to cover transaction/)
+      args.utxos[1].value = magicOutputSelector * 15 // 123180
+      await assertThrowsAsync(
+        async () => await ccb.buildSendTransaction(args),
+        /Not enough satoshi to cover transaction/
+      )
     })
     it('works if the only finance utxo is magic and the asset utxo can pay enough', async function() {
       var args = clone(sendArgs)
       args.fee = 100000
       addUtxos(args, 1, true)
-      args.utxos[0].value = magicOutputSelector * 15  // 123180
-      args.utxos[1].value = magicOutputSelector * 15  // 123180
+      args.utxos[0].value = magicOutputSelector * 15 // 123180
+      args.utxos[1].value = magicOutputSelector * 15 // 123180
       const result = await ccb.buildSendTransaction(args)
       assert(result.txHex)
       var tx = Transaction.fromHex(result.txHex)
-      assert.equal(tx.ins.length, 1)  // utxo with assets
+      assert.equal(tx.ins.length, 1) // utxo with assets
       assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + change
     })
     it('the transaction does not cointain magic inputs', async function() {
@@ -639,14 +661,14 @@ describe('the send builder', function () {
       args.fee = 100000
       addUtxos(args, 4, true)
       args.utxos[0].value = 600
-      args.utxos[1].value = magicOutputSelector * 2      // magic: 16424
-      args.utxos[2].value = magicOutputSelector * 3 + 1  // muggle: 24637
-      args.utxos[3].value = magicOutputSelector * 15     // magic: 123180
-      args.utxos[4].value = 77000                        // muggle
+      args.utxos[1].value = magicOutputSelector * 2 // magic: 16424
+      args.utxos[2].value = magicOutputSelector * 3 + 1 // muggle: 24637
+      args.utxos[3].value = magicOutputSelector * 15 // magic: 123180
+      args.utxos[4].value = 77000 // muggle
       const result = await ccb.buildSendTransaction(args)
       assert(result.txHex)
       var tx = Transaction.fromHex(result.txHex)
-      assert.equal(tx.ins.length, 3)  // utxo with assets, 2 muggle utxos
+      assert.equal(tx.ins.length, 3) // utxo with assets, 2 muggle utxos
       const inputsIndexes = _.map(tx.ins, 'index')
       assert.deepEqual(inputsIndexes, [0, 2, 4])
     })
@@ -686,8 +708,8 @@ var burnArgs = {
   fee: 5000
 }
 
-describe('the burn builder', function () {
-  it('returns valid response with default values', async function () {
+describe('the burn builder', function() {
+  it('returns valid response with default values', async function() {
     var result = await ccb.buildBurnTransaction(burnArgs)
     assert(result.txHex)
     var tx = Transaction.fromHex(result.txHex)
@@ -695,7 +717,9 @@ describe('the burn builder', function () {
     assert.equal(tx.outs.length, 2) // OP_RETURN + change
     assert.deepEqual(result.coloredOutputIndexes, [1])
     var sumValueInputs = sendArgs.utxos[0].value
-    var sumValueOutputs = _.sumBy(tx.outs, function (output) { return output.value })
+    var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+      return output.value
+    })
     assert.equal(sumValueInputs - sumValueOutputs, burnArgs.fee)
     var opReturnScriptBuffer = script.decompile(tx.outs[0].script)[1]
     var ccTransaction = CC.fromHex(opReturnScriptBuffer)
@@ -706,12 +730,11 @@ describe('the burn builder', function () {
   })
 })
 
-describe('the class constructor', function (){
-  it('use custom minDustValue', async function () {
-
+describe('the class constructor', function() {
+  it('use custom minDustValue', async function() {
     var builder = new ColoredCoinsBuilder({
       network: 'testnet',
-      minDustValue: 777,
+      minDustValue: 777
     })
 
     var args = clone(sendArgs)
