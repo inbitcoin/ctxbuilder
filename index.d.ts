@@ -11,9 +11,9 @@ declare module '@inbitcoin/ctxbuilder' {
 }
 
 declare interface IBuilderArgs {
-  network: "mainnet" | "testnet" | "regtest";
-  minDustValue?: number;
-  softMaxUtxos?: number;
+  network: 'mainnet' | 'testnet' | 'regtest'
+  minDustValue?: number
+  softMaxUtxos?: number
 }
 
 declare interface IBuilderArgsSend {

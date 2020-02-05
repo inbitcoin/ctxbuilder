@@ -3,7 +3,7 @@ var bitcoinjs = require('bitcoinjs-lib')
 var Buffer = require('safe-buffer').Buffer
 var debug = require('debug')('findBestMatchByNeededAssets')
 
-var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputvalues, metadata) {
+var findBestMatchByNeededAssets = function(utxos, assetList, key, txb, inputvalues, metadata) {
   debug('findBestMatchByNeededAssets: start for ' + key)
 
   var minInputs = metadata.minInputs || 0
@@ -32,14 +32,16 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
 
   // 1. try to find a utxo with such amount of the asset which is greater or equal to the target amount
   var bestGreaterOrEqualAmountUtxo = findBestGreaterOrEqualAmountUtxo(utxos, assetList, key)
-  var utxosSortedByAssetAmount = _.sortBy(utxos, function (utxo) { return getUtxoAssetAmount(utxo, key) })
+  var utxosSortedByAssetAmount = _.sortBy(utxos, function(utxo) {
+    return getUtxoAssetAmount(utxo, key)
+  })
   if (bestGreaterOrEqualAmountUtxo) {
     debug('bestGreaterOrEqualAmountUtxo = ', bestGreaterOrEqualAmountUtxo)
     selectedUtxos[0] = bestGreaterOrEqualAmountUtxo
   } else {
     // 2. try to get some utxos where the sum of their amount of the asset greater than or equal to the remaining target amount
     debug('try to get utxos smaller than amount')
-    var found = utxosSortedByAssetAmount.some(function (utxo) {
+    var found = utxosSortedByAssetAmount.some(function(utxo) {
       selectedUtxos.push(utxo)
       foundAmount += getUtxoAssetAmount(utxo, key)
       return foundAmount >= assetList[key].amount
@@ -53,19 +55,28 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
   }
 
   debug('add other utxos to reach the minimum inputs length')
-  utxosSortedByAssetAmount.some(function (u) {
-    if (!selectedUtxos.some(function(s) { return s.txid === u.txid && s.index === u.index })) {
+  utxosSortedByAssetAmount.some(function(u) {
+    if (
+      !selectedUtxos.some(function(s) {
+        return s.txid === u.txid && s.index === u.index
+      })
+    ) {
       selectedUtxos.push(u)
     }
     return selectedUtxos.length >= minInputs
   })
 
-  debug('selectedUtxos = ', _.map(selectedUtxos, function (utxo) { return { utxo: (utxo.txid + ':' + utxo.index), amount: getUtxoAssetAmount(utxo, key) } }))
+  debug(
+    'selectedUtxos = ',
+    _.map(selectedUtxos, function(utxo) {
+      return { utxo: utxo.txid + ':' + utxo.index, amount: getUtxoAssetAmount(utxo, key) }
+    })
+  )
 
   debug('adding inputs by assets and amounts')
   var lastAssetId
-  selectedUtxos.some(function (utxo, utxoIndex) {
-    utxo.assets.forEach(function (asset) {
+  selectedUtxos.some(function(utxo, utxoIndex) {
+    utxo.assets.forEach(function(asset) {
       try {
         debug('maybe adding input for ' + asset.assetId)
         if (assetList[asset.assetId] && !assetList[asset.assetId].done) {
@@ -73,14 +84,23 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
           debug('transfer request: ' + assetList[asset.assetId].amount + ' available in utxo: ' + asset.amount)
           debug('adding input')
           var inputIndex = txb.tx.ins.length
-          if (!txb.tx.ins.some(function (txutxo, i) {
-            if (txutxo.index === utxo.index && txutxo.hash.toString('hex').split('').reverse().join('') === utxo.txid) {
-              debug('more assets in same utxo')
-              inputIndex = i
-              return true
-            }
-            return false
-          })) {
+          if (
+            !txb.tx.ins.some(function(txutxo, i) {
+              if (
+                txutxo.index === utxo.index &&
+                txutxo.hash
+                  .toString('hex')
+                  .split('')
+                  .reverse()
+                  .join('') === utxo.txid
+              ) {
+                debug('more assets in same utxo')
+                inputIndex = i
+                return true
+              }
+              return false
+            })
+          ) {
             txb.addInput(utxo.txid, utxo.index)
             debug('setting input value ' + utxo.value + ' actual: ' + Math.round(utxo.value))
             inputvalues.amount += Math.round(utxo.value)
@@ -91,32 +111,60 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
             }
           }
 
-          var aggregationPolicy = asset.aggregationPolicy || 'aggregatable'  // TODO - remove after all assets have this field
+          var aggregationPolicy = asset.aggregationPolicy || 'aggregatable' // TODO - remove after all assets have this field
           var inputIndexInAsset = assetList[asset.assetId].inputs.length
           debug('inputIndex = ' + inputIndex)
           debug('utxoIndex = ' + utxoIndex)
           debug('inputIndexInAsset = ' + inputIndexInAsset)
-          debug('if conditions', assetList[asset.assetId].amount, asset.amount, utxoIndex+1, minInputs)
-          if (assetList[asset.assetId].amount <= asset.amount && utxoIndex+1 >= minInputs) {
+          debug('if conditions', assetList[asset.assetId].amount, asset.amount, utxoIndex + 1, minInputs)
+          if (assetList[asset.assetId].amount <= asset.amount && utxoIndex + 1 >= minInputs) {
             var totalamount = asset.amount
-            if (aggregationPolicy === 'aggregatable' && lastAssetId === asset.assetId && assetList[asset.assetId].inputs.length) {
-              debug('#1 assetList[' + asset.assetId + '].inputs[' + (inputIndexInAsset - 1) + '].amount += ' + asset.amount)
+            if (
+              aggregationPolicy === 'aggregatable' &&
+              lastAssetId === asset.assetId &&
+              assetList[asset.assetId].inputs.length
+            ) {
+              debug(
+                '#1 assetList[' + asset.assetId + '].inputs[' + (inputIndexInAsset - 1) + '].amount += ' + asset.amount
+              )
               assetList[asset.assetId].inputs[inputIndexInAsset - 1].amount += asset.amount
             } else {
-              debug('#2 assetList[' + asset.assetId + '].inputs.push({ index: ' + inputIndex + ', amount: ' + asset.amount + '})')
-              assetList[asset.assetId].inputs.push({index: inputIndex, amount: asset.amount})
+              debug(
+                '#2 assetList[' +
+                  asset.assetId +
+                  '].inputs.push({ index: ' +
+                  inputIndex +
+                  ', amount: ' +
+                  asset.amount +
+                  '})'
+              )
+              assetList[asset.assetId].inputs.push({ index: inputIndex, amount: asset.amount })
             }
             debug('setting change')
             assetList[asset.assetId].change = totalamount - assetList[asset.assetId].amount
             debug('setting done')
             assetList[asset.assetId].done = true
           } else {
-            if (aggregationPolicy === 'aggregatable' && lastAssetId === asset.assetId && assetList[asset.assetId].inputs.length) {
-              debug('#3 assetList[' + asset.assetId + '].inputs[' + (inputIndexInAsset - 1) + '].amount += ' + asset.amount)
+            if (
+              aggregationPolicy === 'aggregatable' &&
+              lastAssetId === asset.assetId &&
+              assetList[asset.assetId].inputs.length
+            ) {
+              debug(
+                '#3 assetList[' + asset.assetId + '].inputs[' + (inputIndexInAsset - 1) + '].amount += ' + asset.amount
+              )
               assetList[asset.assetId].inputs[inputIndexInAsset - 1].amount += asset.amount
             } else {
-              debug('#4 assetList[' + asset.assetId + '].inputs.push({ index: ' + inputIndex + ', amount: ' + asset.amount + '})')
-              assetList[asset.assetId].inputs.push({index: inputIndex, amount: asset.amount})
+              debug(
+                '#4 assetList[' +
+                  asset.assetId +
+                  '].inputs.push({ index: ' +
+                  inputIndex +
+                  ', amount: ' +
+                  asset.amount +
+                  '})'
+              )
+              assetList[asset.assetId].inputs.push({ index: inputIndex, amount: asset.amount })
             }
             assetList[asset.assetId].amount -= asset.amount
           }
@@ -124,7 +172,9 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
         } else {
           debug('not adding input for ' + asset.assetId)
         }
-      } catch (e) { debug('findBestMatchByNeededAssets: error = ', e) }
+      } catch (e) {
+        debug('findBestMatchByNeededAssets: error = ', e)
+      }
 
       lastAssetId = asset.assetId
     })
@@ -140,12 +190,12 @@ var findBestMatchByNeededAssets = function (utxos, assetList, key, txb, inputval
   return true
 }
 
-var findBestGreaterOrEqualAmountUtxo = function (utxos, assetList, key) {
+var findBestGreaterOrEqualAmountUtxo = function(utxos, assetList, key) {
   debug('findBestGreaterOrEqualAmountUtxo for ', key)
   debug('assetList[' + key + '].amount = ', assetList[key].amount)
   var foundLargerOrEqualAmountUtxo = false
 
-  utxos.forEach(function (utxo) {
+  utxos.forEach(function(utxo) {
     utxo.score = 0
     var assetAmount = getUtxoAssetAmount(utxo, key)
     if (assetAmount < assetList[key].amount) {
@@ -156,7 +206,8 @@ var findBestGreaterOrEqualAmountUtxo = function (utxos, assetList, key) {
     if (assetAmount === assetList[key].amount) {
       // debug('for utxo ' + utxo.txid + ':' + utxo.index + ', assetAmount = ' + assetAmount + ', score += 10000')
       utxo.score += 10000
-    } else {  // assetAmount > assetList[key].amount
+    } else {
+      // assetAmount > assetList[key].amount
       // debug('for utxo ' + utxo.txid + ':' + utxo.index + ', assetAmount = ' + assetAmount + ', score += 1000')
       utxo.score += 1000
     }
@@ -172,19 +223,38 @@ var findBestGreaterOrEqualAmountUtxo = function (utxos, assetList, key) {
       } else if (assetAmount > assetList[assetId].amount) {
         debug('for utxo ' + utxo.txid + ':' + utxo.index + ', assetAmount = ' + assetAmount + ', score += 10')
         utxo.score += 10
-      } else {  // assetAmount < assetList[assetId].amount
-        debug('for utxo ' + utxo.txid + ':' + utxo.index + ', assetAmount = ' + assetAmount + ', score += ' + (assetAmount / assetList[assetId].amount))
+      } else {
+        // assetAmount < assetList[assetId].amount
+        debug(
+          'for utxo ' +
+            utxo.txid +
+            ':' +
+            utxo.index +
+            ', assetAmount = ' +
+            assetAmount +
+            ', score += ' +
+            assetAmount / assetList[assetId].amount
+        )
         utxo.score += assetAmount / assetList[assetId].amount
       }
     }
   })
 
   debug('findBestGreaterOrEqualAmountUtxo: done iterating over utxos')
-  return foundLargerOrEqualAmountUtxo && _.maxBy(utxos, function (utxo) { return utxo.score })
+  return (
+    foundLargerOrEqualAmountUtxo &&
+    _.maxBy(utxos, function(utxo) {
+      return utxo.score
+    })
+  )
 }
 
-var getUtxoAssetAmount = function (utxo, assetId) {
-  return _(utxo.assets).filter(function (asset) { return asset.assetId === assetId }).sumBy('amount')
+var getUtxoAssetAmount = function(utxo, assetId) {
+  return _(utxo.assets)
+    .filter(function(asset) {
+      return asset.assetId === assetId
+    })
+    .sumBy('amount')
 }
 
 module.exports = findBestMatchByNeededAssets
