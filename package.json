@@ -17,7 +17,7 @@
     "registry": "https://browny.inbitcoin.it"
   },
   "dependencies": {
-    "@inbitcoin/cerrors": "git://github.com/inbitcoin/cerrors.git#0.1.5",
+    "@inbitcoin/cerrors": "git://github.com/inbitcoin/cerrors.git#0.1.6",
     "bignumber.js": "^4.0.0",
     "bitcoinjs-lib": "^3.0.2",
     "buffer-reverse": "^1.0.1",

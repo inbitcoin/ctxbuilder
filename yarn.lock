@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@inbitcoin/cerrors@git://github.com/inbitcoin/cerrors.git#0.1.5":
-  version "0.1.5"
-  resolved "git://github.com/inbitcoin/cerrors.git#852dca4335f62cab347f50f1831dcac7d2155703"
+"@inbitcoin/cerrors@git://github.com/inbitcoin/cerrors.git#0.1.6":
+  version "0.1.6"
+  resolved "git://github.com/inbitcoin/cerrors.git#0dd48340453a8b6f965066b1e03f8e7bc2af3b94"
   dependencies:
     debug "^2.2.0"
     errors "git+https://github.com/inbitcoin/errors-base.git#43512dc"
