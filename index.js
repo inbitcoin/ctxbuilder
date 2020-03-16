@@ -495,7 +495,9 @@ ColoredCoinsBuilder.prototype._computeCost = function(withfee, args) {
   var cost = withfee ? args.fee : 0
 
   if (args.to) {
-    cost += args.to.length * self.minDustValue
+    args.to.forEach(function (output) {
+      cost += output.amountBtc || self.minDustValue
+    })
   }
 
   // count an asset change, the bitcoin change is not mandatory
@@ -549,10 +551,11 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
       assetList[to.assetId] = { amount: 0, addresses: [], done: false, change: 0, encodeAmount: 0, inputs: [] }
     }
     assetList[to.assetId].amount += to.amount
+    const amountBtc = to.amountBtc || self.minDustValue
     if (to.burn) {
-      assetList[to.assetId].addresses.push({ address: 'burn', amount: to.amount })
+      assetList[to.assetId].addresses.push({ address: 'burn', amount: to.amount, amountBtc: amountBtc })
     } else {
-      assetList[to.assetId].addresses.push({ address: to.address, amount: to.amount })
+      assetList[to.assetId].addresses.push({ address: to.address, amount: to.amount, amountBtc: amountBtc })
     }
   })
 
@@ -646,7 +649,7 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
       })
       debug('putting output in transaction')
       if (address.address !== 'burn') {
-        txb.addOutput(address.address, self.minDustValue)
+        txb.addOutput(address.address, address.amountBtc)
       }
       if (address.reedemScript) {
         reedemScripts.push({
