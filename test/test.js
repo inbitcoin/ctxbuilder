@@ -673,6 +673,47 @@ describe('the send builder', function() {
       assert.deepEqual(inputsIndexes, [0, 2, 4])
     })
   })
+  describe('uses amountBtc', async function() {
+    it('to set the btc value', async function() {
+      var args = clone(sendArgs)
+      args.to[0].amountBtc = 7008
+      const result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+
+      console.log(tx.outs[0].value)
+      assert.equal(tx.outs[0].value, 7008)
+    })
+    it('to compute the fees', async function() {
+      // when feePerKb is used, fees won't change if the amountBtc value is different
+      let args = clone(sendArgs)
+
+      // compute the fees value with a standard amountBtc
+      args.feePerKb = 1000
+      delete args.fee
+      // args.to[0].amountBtc = 7008
+      let result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      let tx = Transaction.fromHex(result.txHex)
+
+      assert.equal(tx.outs[1].value, 0, 'the value of OP_RETURN output is not 0')
+      const standardFee = args.utxos[0].value - tx.outs[0].value - tx.outs[2].value
+
+      // compute the fees value with a non standard amountBtc
+      args = clone(sendArgs)
+      args.feePerKb = 1000
+      delete args.fee
+      args.to[0].amountBtc = 7008
+      result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      tx = Transaction.fromHex(result.txHex)
+
+      assert.equal(tx.outs[1].value, 0, 'the value of OP_RETURN output is not 0')
+      const fee = args.utxos[0].value - tx.outs[0].value - tx.outs[2].value
+
+      assert.equal(fee, standardFee)
+    })
+  })
 })
 
 var burnArgs = {
