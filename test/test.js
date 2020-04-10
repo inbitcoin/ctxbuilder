@@ -791,3 +791,80 @@ describe('the class constructor', function() {
     assert.equal(tx.outs[3].value, 777, 'Satoshis to the colored change output')
   })
 })
+
+// generated with Python
+// amounts = [round(random.random() * min(2**i, 111111111) * 1e7) for i in range(1, 31)]
+// random.shuffle(amounts)
+var amountsArgs = {
+  amounts: [
+    1162278744310,
+    470438413824872,
+    865334940269007,
+    26635831638,
+    562851061,
+    19216108,
+    6783960103909,
+    54305474586,
+    279194260679,
+    47711531393351,
+    70280214257,
+    10539861143,
+    16705204,
+    265469170,
+    2256791934,
+    6621892482630,
+    39317958,
+    55558594,
+    33185237573346,
+    857079239674824,
+    60444333717,
+    1465772646720,
+    2446891095303,
+    233500202,
+    41251757825687,
+    247385184,
+    8581193644,
+    31464035471091,
+    753539955007961,
+    149197981660432,
+  ]
+}
+
+describe('opReturnLimit', async function() {
+  it('requires amounts', async function() {
+    await assertThrowsAsync(async () => await ccb.opReturnLimit({}), /Must have "amounts"/)
+  })
+  it('works with 0 amounts', async function() {
+    const args = {amounts: []}
+    const n = await ccb.opReturnLimit(args)
+    assert.equal(n, 0)
+  })
+  it('it is consistent with its onw results', async function () {
+    var maxN = -1
+    const amounts = amountsArgs.amounts
+    for(var i=0 ; i<amounts.length ; i++) {
+      const args = { amounts: amounts.slice(0, i) }
+      const n = await ccb.opReturnLimit(args)
+      assert(n >= maxN)
+      maxN = n
+    }
+  })
+  it('works with smallest amounts', async function() {
+    var amounts = []
+    for(var i=0 ; i<100 ; i++) {
+      amounts.push(1)
+    }
+    const args = { amounts: amounts }
+    const n = await ccb.opReturnLimit(args)
+    assert(n > 0)
+  })
+  it('works with big amounts', async function() {
+    var amounts = []
+    for(var i=0 ; i<100 ; i++) {
+      amounts.push(1111111111111111)
+    }
+    const args = { amounts: amounts }
+    const n = await ccb.opReturnLimit(args)
+    assert(n > 0)
+  })
+})
