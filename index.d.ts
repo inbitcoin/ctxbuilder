@@ -5,6 +5,8 @@ declare module '@inbitcoin/ctxbuilder' {
     public buildSendTransaction(args: IBuilderArgsSend): Promise<ICapiBuiltTransaction>
 
     public buildIssueTransaction(args: IBuilderArgsIssue): Promise<ICapiBuiltIssueTransaction>
+
+    public opReturnLimit(args: IOpReturnLimitArgs): Promise<number>
   }
 
   export = ColoredCoinsBuilder
@@ -23,6 +25,10 @@ declare interface IBuilderArgsSend {
   bitcoinChangeAddress?: string | (() => Promise<string>)
   fee?: number
   feePerKb?: number
+}
+
+declare interface IOpReturnLimitArgs {
+  amounts: Array<number>
 }
 
 declare interface IBuilderArgsIssue {

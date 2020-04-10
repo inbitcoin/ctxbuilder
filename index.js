@@ -864,4 +864,91 @@ ColoredCoinsBuilder.prototype.buildBurnTransaction = async function(args) {
   return self.buildSendTransaction(args)
 }
 
+// encode the first upTo amounts
+// return True if the encoding is valid
+function testEncodeAmounts(amounts, upTo) {
+  var encoder = cc.newTransaction(0x4343, CC_TX_VERSION)
+  
+  for(var i=0 ; i<Math.min(upTo, amounts.length) ; i++) {
+    // add the amount[i] to the output with index i
+    encoder.addPayment(0, amounts[i], i)
+  }
+  // TODO: catch the error
+  var buffer = null
+  try {
+    buffer = encoder.encode()
+  } catch (error) {
+    if (error.message === 'Data code is bigger then the allowed byte size') {
+      return false
+    } else {
+      throw error
+    }
+  }
+  
+  if (buffer.leftover && buffer.leftover.length > 0) {
+    // Unsupported feature
+    return false
+  }
+  return true
+}
+
+// ::: OpReturnLimit :::
+// most common result
+const FIRST_TRY_N = 12
+const MAX_N = 31
+
+function doOpReturnLimit(amounts, upTo) {
+
+  // try n-1
+  function onError() {
+    return doOpReturnLimit(amounts, upTo-1)
+  }
+  
+  // try n+1 or not
+  function onSuccess() {
+    if (upTo >= amounts.length) {
+      // success on all amounts
+      return amounts.length
+    }
+    return doOpReturnLimit(amounts, upTo+1)
+  }
+
+  const test = testEncodeAmounts(amounts, upTo)
+  if (test && upTo >= MAX_N) {
+    return MAX_N
+  }
+  // first try
+  if (upTo === FIRST_TRY_N) {
+    if (test) {
+      return onSuccess()
+    } else {
+      return onError()
+    }
+  }
+  // going up
+  if (upTo > FIRST_TRY_N) {
+    if (test) {
+      return onSuccess()
+    } else {
+      return upTo-1
+    }
+  }
+  // going down
+  if (upTo < FIRST_TRY_N) {
+    if (test) {
+      return upTo
+    } else {
+      return onError()
+    }
+  }
+}
+
+ColoredCoinsBuilder.prototype.opReturnLimit = async function(args) {
+  var self = this
+  if (!args.amounts) {
+    throw new Error('Must have "amounts"')
+  }
+  return doOpReturnLimit(args.amounts, FIRST_TRY_N)
+}
+
 module.exports = ColoredCoinsBuilder
