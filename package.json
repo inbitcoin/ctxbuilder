@@ -1,6 +1,6 @@
 {
   "name": "@inbitcoin/ctxbuilder",
-  "version": "2.2.5",
+  "version": "2.3.0",
   "description": "High-level abstraction for building Colored Coins transactions",
   "main": "index.js",
   "repository": {
@@ -30,7 +30,7 @@
   "devDependencies": {
     "clone": "^2.1.1",
     "mocha": "^6.1.4",
-    "standard": "^10.0.2",
-    "prettier": "^1.19.1"
+    "prettier": "^1.19.1",
+    "standard": "^10.0.2"
   }
 }
