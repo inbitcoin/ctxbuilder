@@ -462,20 +462,31 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function(args) {
   if (!args.to) {
     throw new Error('Must have "to"')
   }
-  if (!args.changeAddress) {
-    throw new Error('Must have "changeAddress"')
-  }
-  if (!args.fee && !args.feePerKb) {
-    throw new Error('Must have "fee" or "feePerKb"')
-  }
-  if (args.fee && args.feePerKb) {
-    throw new Error('Must not have "fee" and "feePerKb"')
-  }
-  if (args.feePerKb && args.feePerKb < 1000) {
-    throw new Error('"feePerKb" is too low')
-  }
-  if (args.changeAddress === '' || args.bitcoinChangeAddress === '') {
-    throw new Error('"changeAddress and bitcoinChangeAddress must not be an empty string')
+  if (args.rawMode) {
+    if (args.fee)
+      throw new Error('rawMode and fee are incompatible options')
+    if (args.feePerKb)
+      throw new Error('rawMode and feePerKb are incompatible options')
+    if (args.changeAddress)
+      throw new Error('rawMode and changeAddress are incompatible options')
+    if (args.changeAddressBtc)
+      throw new Error('rawMode and changeAddressBtc are incompatible options')
+  } else {
+    if (!args.changeAddress) {
+      throw new Error('Must have "changeAddress"')
+    }
+    if (!args.fee && !args.feePerKb) {
+      throw new Error('Must have "fee" or "feePerKb"')
+    }
+    if (args.fee && args.feePerKb) {
+      throw new Error('Must not have "fee" and "feePerKb"')
+    }
+    if (args.feePerKb && args.feePerKb < 1000) {
+      throw new Error('"feePerKb" is too low')
+    }
+    if (args.changeAddress === '' || args.bitcoinChangeAddress === '') {
+      throw new Error('"changeAddress and bitcoinChangeAddress must not be an empty string')
+    }
   }
   checkNotSupportedArgs(args, 'send')
 
@@ -487,7 +498,10 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function(args) {
     self.network === 'testnet' ? bitcoinjs.networks.testnet : bitcoinjs.networks.bitcoin
   )
 
-  return self._addInputsForSendTransaction(txb, args)
+  if (args.rawMode)
+    return self._buildRawModeSendTransaction(txb, args)
+  else
+    return self._addInputsForSendTransaction(txb, args)
 }
 
 ColoredCoinsBuilder.prototype._computeCost = function(withfee, args) {
@@ -686,7 +700,6 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
     args.fee = 100
     debug('Init args.fee = 100')
   }
-  var txLen = 0
   // baseInput: satoshis provided by the assets utxos
   var baseInput = totalInputs.amount
   while (true) {
@@ -847,6 +860,55 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
     debug('success')
     return { txHex: unsignedTxHex, coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
   }
+}
+
+/*
+ * this is a simplest version of _addInputsForSendTransaction,
+ * (it is too big to add more complixity there).
+ */
+ColoredCoinsBuilder.prototype._buildRawModeSendTransaction = async function(txb, args) {
+  var self = this
+  var coloredOutputIndexes = []
+
+  debug('buildRawModeSendTransaction')
+
+  debug('got unspents from parmameter: ')
+  debug(args.utxos)
+
+  debug('add all the utxos to tx inputs')
+  args.utxos.forEach(function(utxo) {
+    txb.addInput(utxo.txid, utxo.index)
+  })
+
+  debug('reached encoder')
+  var encoder = cc.newTransaction(0x4343, CC_TX_VERSION)
+
+  debug('create outputs and payments')
+  args.to.forEach(function(to) {
+    const fakeInputIndex = 0
+    encoder.addPayment(fakeInputIndex, to.amount, txb.tx.outs ? txb.tx.outs.length : 0)
+    txb.addOutput(to.address, to.amountBtc || self.minDustValue)
+  })
+
+  debug('before using encoder')
+  var buffer = encoder.encode()
+  if (buffer.leftover && buffer.leftover.length > 0) {
+    // We don't expect to enter here
+    debug('Unsupported feature')
+    throw new errors.CCTransactionConstructionError()
+  }
+
+  // add array of colored ouput indexes
+  encoder.payments.forEach(function(payment) {
+    if (typeof payment.output !== 'undefined') coloredOutputIndexes.push(payment.output)
+  })
+
+  debug('encoding done')
+  var ret = bitcoinjs.script.compile([bitcoinjs.opcodes.OP_RETURN, buffer.codeBuffer])
+  txb.addOutput(ret, 0)
+
+  debug('success')
+  return { txHex: txb.tx.toHex(), coloredOutputIndexes: _.uniqBy(coloredOutputIndexes) }
 }
 
 ColoredCoinsBuilder.prototype.buildBurnTransaction = async function(args) {
