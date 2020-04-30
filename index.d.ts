@@ -21,10 +21,11 @@ declare interface IBuilderArgs {
 declare interface IBuilderArgsSend {
   utxos: Array<ICapiUtxo>
   to: Array<{ address: string; amount: number; amountBtc?: number }>
-  changeAddress: string | (() => Promise<string>)
+  changeAddress?: string | (() => Promise<string>)
   bitcoinChangeAddress?: string | (() => Promise<string>)
   fee?: number
   feePerKb?: number
+  rawMode?: boolean
 }
 
 declare interface IOpReturnLimitArgs {

@@ -169,6 +169,88 @@ var sendArgs = {
   fee: 5000
 }
 
+var sendRawModeArgs = {
+  utxos: [
+    {
+      txid: '9ad3154af0fba1c7ff399935f55680810faaf1e382f419fe1247e43edb12941d',
+      index: 0,
+      value: 9789000,
+      used: false,
+      blockheight: 577969,
+      blocktime: 1444861908000,
+      scriptPubKey: {
+        asm: 'OP_DUP OP_HASH160 0e8fffc70907a025e65f0bdbc5ec6bb2d326d3a7 OP_EQUALVERIFY OP_CHECKSIG',
+        hex: '76a9140e8fffc70907a025e65f0bdbc5ec6bb2d326d3a788ac',
+        reqSigs: 1,
+        type: 'pubkeyhash',
+        addresses: ['mgqxFyV13aG2HQpnQ2bLKTUwm8wTPtssQ5']
+      },
+      assets: [
+        {
+          assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j',
+          amount: 500,
+          issueTxid: '3b598a4048557ab507952ee5705040ab1a184e54ed70f31e0e20b0be7549cd09',
+          divisibility: 2,
+          lockStatus: false,
+          aggregationPolicy: 'aggregatable'
+        }
+      ]
+    },
+    {
+      txid: '9ad3154af0fba1c7ff399935f55680810faaf1e382f419fe1247e43edb12941d',
+      index: 1,
+      value: 2000,
+      used: false,
+      blockheight: 577969,
+      blocktime: 1444861908000,
+      scriptPubKey: {
+        asm: 'OP_DUP OP_HASH160 0e8fffc70907a025e65f0bdbc5ec6bb2d326d3a7 OP_EQUALVERIFY OP_CHECKSIG',
+        hex: '76a9140e8fffc70907a025e65f0bdbc5ec6bb2d326d3a788ac',
+        reqSigs: 1,
+        type: 'pubkeyhash',
+        addresses: ['mgqxFyV13aG2HQpnQ2bLKTUwm8wTPtssQ5']
+      },
+      assets: [
+        {
+          assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j',
+          amount: 100,
+          issueTxid: '3b598a4048557ab507952ee5705040ab1a184e54ed70f31e0e20b0be7549cd09',
+          divisibility: 2,
+          lockStatus: false,
+          aggregationPolicy: 'aggregatable'
+        }
+      ]
+    },
+    {
+      txid: '9ad3154af0fba1c7ff399935f55680810faaf1e382f419fe1247e43edb12941d',
+      index: 3,
+      value: 33333,
+      used: false,
+      blockheight: 577969,
+      blocktime: 1444861908000,
+      scriptPubKey: {
+        asm: 'OP_DUP OP_HASH160 0e8fffc70907a025e65f0bdbc5ec6bb2d326d3a7 OP_EQUALVERIFY OP_CHECKSIG',
+        hex: '76a9140e8fffc70907a025e65f0bdbc5ec6bb2d326d3a788ac',
+        reqSigs: 1,
+        type: 'pubkeyhash',
+        addresses: ['mgqxFyV13aG2HQpnQ2bLKTUwm8wTPtssQ5']
+      },
+      assets: []
+    }
+  ],
+  to: [
+    {
+      address: 'mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY', amount: 20,
+      assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j'
+    },
+    {
+      address: '2MyjESMWRjAWm9wJqr4tnVf9kD9sb1YcM2D', amount: 10, amountBtc: 44000,
+      assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j'
+    },
+  ],
+  rawMode: true
+}
+
 describe('the send builder', function() {
   it('args must have utxos field', async function() {
     var args = clone(sendArgs)
@@ -712,6 +794,53 @@ describe('the send builder', function() {
       const fee = args.utxos[0].value - tx.outs[0].value - tx.outs[2].value
 
       assert.equal(fee, standardFee)
+    })
+  })
+
+  describe('raw mode', async function() {
+    it('does not accept fee parameter', async function() {
+      var args = clone(sendRawModeArgs)
+      args.fee = 5000
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and fee are incompatible options/)
+    })
+    it('does not accept feePerKb parameter', async function() {
+      var args = clone(sendRawModeArgs)
+      args.feePerKb = 5000
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and feePerKb are incompatible options/)
+    })
+    it('does not accept changeAddress parameter', async function() {
+      var args = clone(sendRawModeArgs)
+      args.changeAddress = "n3uTa2Hfa8BVXfhFVu6MwchmjEGFBDgrMi"
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and changeAddress are incompatible options/)
+    })
+    it('does not accept changeAddressBtc parameter', async function() {
+      var args = clone(sendRawModeArgs)
+      args.changeAddressBtc = "n3uTa2Hfa8BVXfhFVu6MwchmjEGFBDgrMi"
+      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and changeAddressBtc are incompatible options/)
+    })
+    it('uses all the inputs', async function() {
+      // even if it is not needed
+      var args = clone(sendRawModeArgs)
+      const result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      const tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 3)
+    })
+    it('do not create change outputs', async function() {
+      var args = clone(sendRawModeArgs)
+      const result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      const tx = Transaction.fromHex(result.txHex)
+
+      assert.equal(tx.outs.length, 2 + 1) // send outputs + op return
+    })
+    it('uses amountBtc values', async function() {
+      var args = clone(sendRawModeArgs)
+      const result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      const tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.outs[1].value, args.to[1].amountBtc)
+      assert.equal(tx.outs[2].value, 0)
     })
   })
 })
