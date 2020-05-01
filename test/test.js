@@ -455,6 +455,15 @@ describe('the send builder', function() {
     }
   }
 
+  it('can select enough sats required by amountBtc', async function() {
+    var args = clone(sendArgs)
+    args.to[0].amountBtc = args.utxos[0].value * 10
+    addUtxos(args, 10, true)
+    var result = await ccb.buildSendTransaction(args)
+    assert(result.txHex)
+    Transaction.fromHex(result.txHex)
+  })
+
   describe('coin selection', function() {
     function expectedNumberOfUtxos(utxos, softMaxUtxos) {
       var overSize = utxos.length - softMaxUtxos
