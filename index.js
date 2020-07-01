@@ -12,19 +12,30 @@ var bufferReverse = require('buffer-reverse')
 const magicOutputSelector = 8212
 const CC_TX_VERSION = 0x02
 
-// Scripts sizes
-//
-// sig length: 6           +32 +33 +1 = 72
-//             DER header  s   r   sig type
-const P2PKH_SCRIPTSIG_SIZE = 107
-// P2WPKH nested
-const P2SH_SEGWIT_SIG_SIZE = 50 // 23 + ceil(107/4)
-// scriptSig: 23 = 1     +1       +1    +20
-//                 push  version  push  pubkey hash
-// <0 <20-byte-key-hash>>
-// witness: 107 = 1+72+1+33
-// <signature> <pubkey>
-const P2PK_SIG_SIZE = 73 // 1 (push opcode) +72
+const TX_WEIGHT = {
+  p2pkh: {
+    input: 592,
+    output: 136,
+  },
+  p2wpkh: {
+    input: 271,
+    output: 124,
+  },
+  p2wpkhInP2sh: {
+    input: 364, // (36+1+23+4)*4+1+1+72+1+33
+  },
+  p2sh: {
+    output: 128,
+  },
+  p2pk: {
+    input: 456,
+  },
+  baseTx: {
+    legacy: 40,
+    segwit: 42,
+  },
+  baseOutput: 36,  // weight of an output without its scriptPubKey
+}
 
 var ColoredCoinsBuilder = function(properties) {
   properties = properties || {}
@@ -699,6 +710,8 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
     // Start from 1: it is like 0, but Boolean(1) is true
     args.fee = 100
     debug('Init args.fee = 100')
+  } else {
+    debug(`Fee setting: fee ${args.fee}, feePerKb ${args.feePerKb}`)
   }
   // baseInput: satoshis provided by the assets utxos
   var baseInput = totalInputs.amount
@@ -770,35 +783,89 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
         .join('')
     }
 
-    function _getInputScriptsVirtualLenFromScriptPubKey(scriptPubKey) {
+    // scripts are not reversed, buffers memorizes them from the first byte
+    function b2a_script(hash) {
+      if (!hash) return ''
+      return hash
+        .toString('hex')
+        .match(/.{2}/g)
+        .join('')
+    }
+
+    function _getInputWeightFromScriptPubKey(scriptPubKey) {
       // P2PKH
       // 76a9140e8fffc70907a025e65f0bdbc5ec6bb2d326d3a788ac
       // 76a914xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx88ac
       if (Boolean(scriptPubKey.match(/76a914[a-f0-9]{40}88ac/))) {
-        return P2PKH_SCRIPTSIG_SIZE
+        return TX_WEIGHT.p2pkh.input
       }
       // P2SH (assume nested segwit )
       // a91407e8a3eaf30ffec25e0a2234783e2fd235d0250187
       // a914xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx87
       if (Boolean(scriptPubKey.match(/a914[a-f0-9]{40}87/))) {
-        return P2SH_SEGWIT_SIG_SIZE
+        return TX_WEIGHT.p2wpkhInP2sh.input
       }
+
       // P2PK
       // 2102fe4bde2c1a5c2b4cfba984f3a6c32c5cb5e8f835c7f23b5a7ab80c848df3cfa9ac
       // 21xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxac
       if (Boolean(scriptPubKey.match(/21[a-f0-9]{66}ac/))) {
-        return P2PK_SIG_SIZE
+        return TX_WEIGHT.p2pk.input
+      }
+      // P2WPKH
+      // 0014fc0900542fd19a3b551db93d8528c05b62528239
+      // 0014xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      if (Boolean(scriptPubKey.match(/0014[a-f0-9]{40}/))) {
+        return TX_WEIGHT.p2wpkh.input
       }
       throw new Error('scriptPubKey not supported: ' + scriptPubKey)
     }
 
-    function getInputScriptsVirtualLen(inputs, utxos, scriptsCache) {
+    // Return true if P2SH (nested Segwit) or P2WPKH
+    function _isSegwit(scriptPubKey) {
+      return Boolean(scriptPubKey.match(/a914[a-f0-9]{40}87/)) || Boolean(scriptPubKey.match(/0014[a-f0-9]{40}/))
+    }
+
+    function _getOutputWeightFromScriptPubKey(scriptPubKey) {
+      // P2PKH
+      // 76a9140e8fffc70907a025e65f0bdbc5ec6bb2d326d3a788ac
+      // 76a914xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx88ac
+      if (Boolean(scriptPubKey.match(/76a914[a-f0-9]{40}88ac/))) {
+        return TX_WEIGHT.p2pkh.output
+      }
+      // P2SH
+      // a91407e8a3eaf30ffec25e0a2234783e2fd235d0250187
+      // a914xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx87
+      if (Boolean(scriptPubKey.match(/a914[a-f0-9]{40}87/))) {
+        return TX_WEIGHT.p2sh.output
+      }
+
+      // P2WPKH
+      // 0014fc0900542fd19a3b551db93d8528c05b62528239
+      // 0014xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      if (Boolean(scriptPubKey.match(/0014[a-f0-9]{40}/))) {
+        return TX_WEIGHT.p2wpkh.output
+      }
+
+      // OP_RETURN
+      // 6a06434302150014
+      // 6axxxxxxxx...xxx
+      if (Boolean(scriptPubKey.match(/6a[a-f0-9]+/))) {
+        return TX_WEIGHT.baseOutput + scriptPubKey.length * 2  // hex.length / 2 * 4
+      }
+      throw new Error('scriptPubKey not supported: ' + scriptPubKey)
+    }
+
+    function getTransactionWeight(tx, utxos, scriptsCache) {
+      debug('getTransactionWeight')
       scriptsCache = scriptsCache || {}
-      var vBytes = 0
+      let weight = 0
+      let isSegwit = false
+
       // scriptsCache: map `${txid}:${index}` -> hex script
-      for (var i in inputs) {
-        const txid = b2a_hash(inputs[i].hash)
-        const index = inputs[i].index
+      for (const i in tx.ins) {
+        const txid = b2a_hash(tx.ins[i].hash)
+        const index = tx.ins[i].index
 
         // test cache
         if (scriptsCache[`${txid}:${index}`]) {
@@ -821,9 +888,27 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
           throw new Error('inputs and utxos inconsistency')
         }
 
-        vBytes += _getInputScriptsVirtualLenFromScriptPubKey(scriptPubKey)
+        const inputWeight = _getInputWeightFromScriptPubKey(scriptPubKey)
+        weight += inputWeight
+        isSegwit = isSegwit || _isSegwit(scriptPubKey)
+        debug(`Input ${i} weight: ${inputWeight}`)
       }
-      return vBytes
+      if (isSegwit) {
+        debug('It is Segwit')
+        weight += TX_WEIGHT.baseTx.segwit
+      }
+      else {
+        debug('It is legacy')
+        weight += TX_WEIGHT.baseTx.legacy
+      }
+      for (const i in tx.outs) {
+        const scriptHex = b2a_script(tx.outs[i].script)
+        const outputWeight = _getOutputWeightFromScriptPubKey(scriptHex)
+        weight += outputWeight
+        debug(`Output ${i} weight: ${outputWeight}`)
+      }
+      debug(`Transation weight: ${weight}`)
+      return weight
     }
 
     if (numOfChanges === 2 || !coloredChange) {
@@ -843,16 +928,15 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
       builder.addOutput(args.changeAddress, lastOutputValue)
     }
     const unsignedTxHex = builder.tx.toHex()
-    const unsignedLen = Math.round(unsignedTxHex.length / 2)
-    const txVLen = unsignedLen + getInputScriptsVirtualLen(builder.tx.ins, args.utxos)
+    const txWeight = getTransactionWeight(builder.tx, args.utxos)
     if (args.feePerKb) {
       // Is the fee rate correct?
-      var realFeePerKb = (args.fee / txVLen) * 1000
+      var realFeePerKb = (args.fee / txWeight) * 4000
       if (realFeePerKb < args.feePerKb) {
         // Retry!
         debug('Current args.fee = ' + args.fee + ' feePerKb = ' + realFeePerKb)
-        debug('Wanted feePerKb = ' + args.feePerKb + ' txVLen = ' + txVLen)
-        args.fee = Math.ceil((txVLen / 1000) * args.feePerKb)
+        debug('Wanted feePerKb = ' + args.feePerKb + ' txWeight = ' + txWeight)
+        args.fee = Math.ceil((txWeight / 4000) * args.feePerKb)
         debug('Insufficient fee rate, retry with new fee = ' + args.fee)
         continue
       }
