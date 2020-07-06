@@ -856,11 +856,24 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
       throw new Error('scriptPubKey not supported: ' + scriptPubKey)
     }
 
+    function _getVarIntSize(value) {
+      // VarInt encodes an int value into a variable data structure.
+      // Computes the size
+      if (value < 253) return 1
+      if (value < 65536) return 3  // 2**16
+      if (value < 4294967296) return 5  // 2**32
+      return 9
+    }
+
     function getTransactionWeight(tx, utxos, scriptsCache) {
       debug('getTransactionWeight')
       scriptsCache = scriptsCache || {}
       let weight = 0
       let isSegwit = false
+
+      const inputCounterWeight = _getVarIntSize(builder.tx.ins.length) * 4
+      weight += inputCounterWeight - 4
+      // We remove 4 wu because TX_WEIGHT.baseTx includes the most common case: 1 byte
 
       // scriptsCache: map `${txid}:${index}` -> hex script
       for (const i in tx.ins) {

@@ -788,6 +788,35 @@ describe('the send builder', function() {
       var feePerKb = fee / (signedSize / 1000)
       testFeePerKb(feePerKb, 7777)
     })
+    it('fee includes VarInt input counter', async function() {
+      // VarInt counters are used to count inputs and outputs
+      // use 300 inputs
+      const N = 300
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      args.utxos[0].assets[0].amount = 1
+      args.to[0].amount = N
+      addUtxos(args, N - 1)
+      delete args.fee
+      args.feePerKb = 1000
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, N)
+      assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + bitcoin change
+      assert.deepEqual(result.coloredOutputIndexes, [0])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach(input => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
+      const expectedFee = (10 + (3 - 1)) + 148 * N + 2 * 34 + (9 + tx.outs[1].script.length)
+      const fee = sumValueInputs - sumValueOutputs
+      assert.equal(fee, expectedFee)
+    })
   })
   it('works with several inputs', async function() {
     var args = clone(sendArgs)
