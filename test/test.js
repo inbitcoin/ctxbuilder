@@ -12,8 +12,6 @@ var _ = require('lodash')
 
 // redefinition of constants
 const P2PKH_SCRIPTSIG_SIZE = 107
-const P2SH_SEGWIT_SIG_SIZE = 50
-const P2WPKH_SIG_SIZE = null // TODO
 const P2PK_SIG_SIZE = 73
 
 /* Tests utils */
@@ -125,6 +123,11 @@ describe('the issue builder', function() {
 const p2shSegwitScriptPubKey = {
   hex: 'a91407e8a3eaf30ffec25e0a2234783e2fd235d0250187',
   addresses: ['2Msy3QkwgBpqQVuYMxG8UYLa4bBawAyf6a2']
+}
+
+const p2wpkhScriptPubKey = {
+  hex: '0014480f3f8a306f62cc0394de9cf0278fe191cd14bf',
+  addresses: ['tb1qfq8nlz3sda3vcqu5m6w0qfu0uxgu699lteuw8p']
 }
 
 const p2pkScriptPubKey = {
@@ -576,9 +579,10 @@ describe('the send builder', function() {
   })
   describe('feePerKb', async function() {
     function testFeePerKb(actual, expected) {
+      // vKb, actual
       var msg = '. actual = ' + actual + ' e expected = ' + expected
       assert.ok(actual >= expected, 'feePerKb is too low' + msg)
-      assert.ok(actual < expected * 1.1, 'feePerKb is too high' + msg)
+      assert.ok(actual < expected * 1.02, 'feePerKb is too high' + msg)
     }
 
     it('works if the parameter feePerKb is used instead of fee', async function() {
@@ -675,9 +679,87 @@ describe('the send builder', function() {
         return output.value
       })
       var fee = sumValueInputs - sumValueOutputs
-      const unsignedSize = Math.round(result.txHex.length / 2)
-      const signedSize = unsignedSize + tx.ins.length * P2SH_SEGWIT_SIG_SIZE
-      var feePerKb = fee / (signedSize / 1000)
+      const weight = 42 + 364 + 3 * 136 + (36 + tx.outs[1].script.length * 4)
+      // base Segwit + p2wpkh in p2sh input + 3 * p2pkh outputs + op_return output
+      var feePerKb = fee / (weight / 4000)
+      testFeePerKb(feePerKb, 7777)
+    })
+    it('works if there are native segwit inputs', async function() {
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      delete args.fee
+      args.utxos[0].scriptPubKey = clone(p2wpkhScriptPubKey)
+      args.feePerKb = 7777
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 1)
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach(input => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
+      var fee = sumValueInputs - sumValueOutputs
+      const weight = 42 + 271 + 3 * 136 + (36 + tx.outs[1].script.length * 4)
+      // base Segwit + p2wpkh input + 3 * p2pkh outputs + op_return output
+      var feePerKb = fee / (weight / 4000)
+      testFeePerKb(feePerKb, 7777)
+    })
+    it('works if there are wrapper segwit outputs', async function() {
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      args.to[0].address = '2N3HjV1s7DRKeX92upkHDzghdaw3SmPkRSc'
+      delete args.fee
+      args.feePerKb = 7777
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 1)
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach(input => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
+      var fee = sumValueInputs - sumValueOutputs
+      const weight = 40 + 592 + 128 + 2 * 136 + (36 + tx.outs[1].script.length * 4)
+      // base legacy + p2pkh input + p2sh output + 2 * p2pkh outputs + op_return output
+      var feePerKb = fee / (weight / 4000)
+      testFeePerKb(feePerKb, 7777)
+    })
+    it('works if there are native segwit outputs', async function() {
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      args.to[0].address = 'tb1qugq5lep9qzxv3w70v26ez00n3cjn630fup4fr2'
+      delete args.fee
+      args.feePerKb = 7777
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 1)
+      assert.equal(tx.outs.length, 4) // transfer + OP_RETURN + 2 changes
+      assert.deepEqual(result.coloredOutputIndexes, [0, 3])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach(input => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
+      var fee = sumValueInputs - sumValueOutputs
+      const weight = 40 + 592 + 124 + 2 * 136 + (36 + tx.outs[1].script.length * 4)
+      // base legacy + p2pkh input + p2wpkh output + 2 * p2pkh outputs + op_return output
+      var feePerKb = fee / (weight / 4000)
       testFeePerKb(feePerKb, 7777)
     })
     it('works if there are p2pk inputs', async function() {
@@ -705,6 +787,35 @@ describe('the send builder', function() {
       const signedSize = unsignedSize + tx.ins.length * P2PK_SIG_SIZE
       var feePerKb = fee / (signedSize / 1000)
       testFeePerKb(feePerKb, 7777)
+    })
+    it('fee includes VarInt input counter', async function() {
+      // VarInt counters are used to count inputs and outputs
+      // use 300 inputs
+      const N = 300
+      var args = clone(sendArgs)
+      args.bitcoinChangeAddress = 'mhj6b1H3BsFo4N32hMYoXMyx9UxTHw5VFK'
+      args.utxos[0].assets[0].amount = 1
+      args.to[0].amount = N
+      addUtxos(args, N - 1)
+      delete args.fee
+      args.feePerKb = 1000
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, N)
+      assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + bitcoin change
+      assert.deepEqual(result.coloredOutputIndexes, [0])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach(input => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
+      const expectedFee = (10 + (3 - 1)) + 148 * N + 2 * 34 + (9 + tx.outs[1].script.length)
+      const fee = sumValueInputs - sumValueOutputs
+      assert.equal(fee, expectedFee)
     })
   })
   it('works with several inputs', async function() {
@@ -772,7 +883,6 @@ describe('the send builder', function() {
       assert(result.txHex)
       var tx = Transaction.fromHex(result.txHex)
 
-      console.log(tx.outs[0].value)
       assert.equal(tx.outs[0].value, 7008)
     })
     it('to compute the fees', async function() {
@@ -977,7 +1087,7 @@ describe('opReturnLimit', async function() {
     const n = await ccb.opReturnLimit(args)
     assert.equal(n, 0)
   })
-  it('it is consistent with its onw results', async function () {
+  it('it is consistent with its own results', async function () {
     var maxN = -1
     const amounts = amountsArgs.amounts
     for(var i=0 ; i<amounts.length ; i++) {
