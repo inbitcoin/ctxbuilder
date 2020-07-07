@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 var softMaxWalletUtxos = 3
 var ColoredCoinsBuilder = require('..')
-var ccb = new ColoredCoinsBuilder({ network: 'testnet', softMaxUtxos: softMaxWalletUtxos })
+var ccb = new ColoredCoinsBuilder({ network: 'testnet', softMaxUtxos: softMaxWalletUtxos, assetAddressHrp: 'sac' })
 var assert = require('assert')
 var clone = require('clone')
 var bitcoinjs = require('bitcoinjs-lib')
@@ -1155,5 +1155,32 @@ describe('opReturnLimit', async function() {
     const args = { amounts: amounts }
     const n = await ccb.opReturnLimit(args)
     assert(n > 0)
+  })
+})
+
+describe('addresses conversion', function() {
+  it('converts valid bitcoin address to asset address', async function() {
+    const bitcoin = 'tb1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
+    const asset = ccb.toAssetBech32Address(bitcoin)
+    assert.equal(asset, 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89')
+  })
+  it('raises error on invalid bitcoin address', async function() {
+    const bitcoin = 'inv1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
+    await assertThrowsAsync(
+      async () => await ccb.toAssetBech32Address(bitcoin),
+      /Invalid bitcoin address/
+    )
+  })
+  it('converts valid asset address to bitcoin address', async function() {
+    const asset = 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89'
+    const bitcoin = ccb.toBitcoinBech32Address(asset)
+    assert.equal(bitcoin, 'tb1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p')
+  })
+  it('raises error on invalid asset address', async function() {
+    const asset = 'sac1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
+    await assertThrowsAsync(
+      async () => await ccb.toBitcoinBech32Address(asset),
+      /Invalid asset address/
+    )
   })
 })

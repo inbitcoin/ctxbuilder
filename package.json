@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@inbitcoin/cerrors": "git://github.com/inbitcoin/cerrors.git#0.1.6",
+    "bech32": "^1.1.4",
     "bignumber.js": "^9.0.0",
     "bitcoinjs-lib": "^3.0.2",
     "buffer-reverse": "^1.0.1",

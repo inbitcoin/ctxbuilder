@@ -8,6 +8,7 @@ var Buffer = require('safe-buffer').Buffer
 var debug = require('debug')('cc-transaction-builder')
 var errors = require('@inbitcoin/cerrors')
 var bufferReverse = require('buffer-reverse')
+var bech32 = require('bech32')
 
 const magicOutputSelector = 8212
 const CC_TX_VERSION = 0x02
@@ -55,6 +56,8 @@ var ColoredCoinsBuilder = function(properties) {
   this.minDustValue = parseInt(properties.minDustValue) || 600
 
   this.softMaxUtxos = parseInt(properties.softMaxUtxos) || 666
+
+  this.assetAddressHrp = properties.assetAddressHrp
 }
 
 function checkNotSupportedArgs(args, builder) {
@@ -1113,6 +1116,47 @@ ColoredCoinsBuilder.prototype.opReturnLimit = async function(args) {
     throw new Error('Must have "amounts"')
   }
   return doOpReturnLimit(args.amounts, FIRST_TRY_N)
+}
+
+ColoredCoinsBuilder.prototype._getHrp = function() {
+  var self = this
+  if (!self.assetAddressHrp) throw new Error('HRP is not defined')
+  if (self.network == 'testnet') return 't' + self.assetAddressHrp
+  else return self.assetAddressHrp
+}
+
+ColoredCoinsBuilder.prototype._getBtcHrp = function() {
+  var self = this
+  if (self.network === 'testnet') return 'tb'
+  else return 'bc'
+}
+
+ColoredCoinsBuilder.prototype.toAssetBech32Address = function(address) {
+  var self = this
+  const hrp = self._getHrp()
+  let bech32Data
+  try {
+    bech32Data = bech32.decode(address)
+  } catch (exc) {
+    throw new Error('Invalid bitcoin address')
+  }
+  if (bech32Data.prefix !== self._getBtcHrp())
+    throw new Error('Invalid bitcoin address')
+  return bech32.encode(hrp, bech32Data.words)
+}
+
+ColoredCoinsBuilder.prototype.toBitcoinBech32Address = function(address) {
+  var self = this
+  const hrp = self._getHrp()
+  let bech32Data
+  try {
+    bech32Data = bech32.decode(address)
+  } catch (exc) {
+    throw new Error('Invalid asset address')
+  }
+  if (bech32Data.prefix !== hrp)
+    throw new Error('Invalid asset address')
+  return bech32.encode(self._getBtcHrp(), bech32Data.words)
 }
 
 module.exports = ColoredCoinsBuilder

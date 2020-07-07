@@ -7,6 +7,10 @@ declare module '@inbitcoin/ctxbuilder' {
     public buildIssueTransaction(args: IBuilderArgsIssue): Promise<ICapiBuiltIssueTransaction>
 
     public opReturnLimit(args: IOpReturnLimitArgs): Promise<number>
+
+    public toAssetBech32Address(address: string): string
+
+    public toBitcoinBech32Address(address: string): string
   }
 
   export = ColoredCoinsBuilder
@@ -16,6 +20,7 @@ declare interface IBuilderArgs {
   network: 'mainnet' | 'testnet' | 'regtest'
   minDustValue?: number
   softMaxUtxos?: number
+  assetAddressHrp?: string
 }
 
 declare interface IBuilderArgsSend {
