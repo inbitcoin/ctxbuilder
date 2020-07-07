@@ -817,6 +817,47 @@ describe('the send builder', function() {
       const fee = sumValueInputs - sumValueOutputs
       assert.equal(fee, expectedFee)
     })
+    it('works if fees are decreased in the fee cycle', async function() {
+      // The transaction is built to cause the deletion of the bitcoin change output
+      // after the some rounds (maybe one) of the fee cycle.
+      // So the fee selection algorithm must decrease the estimation of the fees
+      var args = clone(sendArgs)
+      args.changeAddress = 'tb1q4g5welug9xdz4rq6j9d20fshegh80000qce8qm'
+      args.bitcoinChangeAddress = 'tb1qc603lcjl3yzj9wgaskzkvxuxe8k4acadg0lvdg'
+      // the bitcoin change address won't be used
+      delete args.fee
+      args.utxos[0].assets[0].amount = 606666666
+      args.utxos[0].value = 546
+      args.utxos[0].scriptPubKey = clone(p2shSegwitScriptPubKey)
+
+      // add a bitcoin input
+      addUtxos(args, 1, true)
+      args.utxos[1].value = 1272
+      args.utxos[1].scriptPubKey = clone(p2wpkhScriptPubKey)
+
+      args.to[0].address = '2NCWmUyf7Sq1rzBpbfqXZWocqUtZ8ZPxqjg'
+      args.to[0].amount = 6666666
+
+      args.feePerKb = 1000
+      var result = await ccb.buildSendTransaction(args)
+      assert(result.txHex)
+      var tx = Transaction.fromHex(result.txHex)
+      assert.equal(tx.ins.length, 2)
+      assert.equal(tx.outs.length, 3) // transfer + OP_RETURN + colored change
+      assert.deepEqual(result.coloredOutputIndexes, [0, 2])
+      // Compute the fees, check if they are correct
+      var sumValueInputs = 0
+      tx.ins.forEach(input => {
+        sumValueInputs += args.utxos[input.index].value
+      })
+      var sumValueOutputs = _.sumBy(tx.outs, function(output) {
+        return output.value
+      })
+      var fee = sumValueInputs - sumValueOutputs
+      const weight = 42+(364+271)+(128+36+tx.outs[1].script.length*4+124)
+      var feePerKb = fee / (weight / 4000)
+      testFeePerKb(feePerKb, 1000)
+    })
   })
   it('works with several inputs', async function() {
     var args = clone(sendArgs)

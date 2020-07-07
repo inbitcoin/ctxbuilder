@@ -924,6 +924,11 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
       return weight
     }
 
+    function _validateFeePerKb(actual, expected) {
+      // max difference: 0.5%
+      return actual >= expected && (actual - expected) / expected < 0.005
+    }
+
     if (numOfChanges === 2 || !coloredChange) {
       // Add btc
       // use btc change if it is defined, instead use the change address
@@ -944,8 +949,8 @@ ColoredCoinsBuilder.prototype._addInputsForSendTransaction = async function(txb,
     const txWeight = getTransactionWeight(builder.tx, args.utxos)
     if (args.feePerKb) {
       // Is the fee rate correct?
-      var realFeePerKb = (args.fee / txWeight) * 4000
-      if (realFeePerKb < args.feePerKb) {
+      const realFeePerKb = (args.fee / txWeight) * 4000
+      if (!_validateFeePerKb(realFeePerKb, args.feePerKb)) {
         // Retry!
         debug('Current args.fee = ' + args.fee + ' feePerKb = ' + realFeePerKb)
         debug('Wanted feePerKb = ' + args.feePerKb + ' txWeight = ' + txWeight)
