@@ -188,7 +188,7 @@ ColoredCoinsBuilder.prototype._addInputsForIssueTransaction = function(txb, args
         )
       }
       debug('math: ' + current.toNumber() + ' ' + utxo.value)
-      current = current.add(utxo.value)
+      current = current.plus(utxo.value)
       if (args.flags && args.flags.injectPreviousOutput) {
         var chunks = bitcoinjs.script.decompile(new Buffer(utxo.scriptPubKey.hex, 'hex'))
         txb.tx.ins[txb.tx.ins.length - 1].script = bitcoinjs.script.compile(chunks)
@@ -438,7 +438,7 @@ ColoredCoinsBuilder.prototype._insertSatoshiToTransaction = function(utxos, txb,
       debug('add input: ' + utxo.txid + ':' + utxo.index)
       txb.addInput(utxo.txid, utxo.index)
       inputsValue.amount += utxo.value
-      currentAmount = currentAmount.add(utxo.value)
+      currentAmount = currentAmount.plus(utxo.value)
       if (metadata.flags && metadata.flags.injectPreviousOutput) {
         var chunks = bitcoinjs.script.decompile(new Buffer(utxo.scriptPubKey.hex, 'hex'))
         txb.tx.ins[txb.tx.ins.length - 1].script = bitcoinjs.script.compile(chunks)
