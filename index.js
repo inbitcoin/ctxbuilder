@@ -1159,4 +1159,27 @@ ColoredCoinsBuilder.prototype.toBitcoinBech32Address = function(address) {
   return bech32.encode(self._getBtcHrp(), bech32Data.words)
 }
 
+ColoredCoinsBuilder.prototype._isValidBech32Address = function(address, hrp) {
+  var self = this
+  let bech32Data
+  try {
+    bech32Data = bech32.decode(address)
+  } catch (exc) {
+    return false
+  }
+  return bech32Data.prefix === hrp
+}
+
+ColoredCoinsBuilder.prototype.isValidBitcoinBech32Address = function(address) {
+  var self = this
+  const hrp = self._getBtcHrp()
+  return self._isValidBech32Address(address, hrp)
+}
+
+ColoredCoinsBuilder.prototype.isValidAssetBech32Address = function(address) {
+  var self = this
+  const hrp = self._getHrp()
+  return self._isValidBech32Address(address, hrp)
+}
+
 module.exports = ColoredCoinsBuilder

@@ -11,6 +11,10 @@ declare module '@inbitcoin/ctxbuilder' {
     public toAssetBech32Address(address: string): string
 
     public toBitcoinBech32Address(address: string): string
+
+    public isValidBitcoinBech32Address(address: string): boolean
+
+    public isValidAssetBech32Address(address: string): boolean
   }
 
   export = ColoredCoinsBuilder
