@@ -29,7 +29,7 @@ declare interface IBuilderArgs {
 
 declare interface IBuilderArgsSend {
   utxos: Array<ICapiUtxo>
-  to: Array<{ address: string; amount: number; amountBtc?: number, assetId: string }>
+  to: Array<{ address: string; amount: number; amountBtc?: number; assetId: string }>
   changeAddress?: string | (() => Promise<string>)
   bitcoinChangeAddress?: string | (() => Promise<string>)
   fee?: number

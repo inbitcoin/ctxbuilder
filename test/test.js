@@ -243,13 +243,16 @@ var sendRawModeArgs = {
   ],
   to: [
     {
-      address: 'mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY', amount: 20,
+      address: 'mrS8spZSamejRTW2HG9xshY4pZqhB1BfLY',
+      amount: 20,
       assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j'
     },
     {
-      address: '2MyjESMWRjAWm9wJqr4tnVf9kD9sb1YcM2D', amount: 10, amountBtc: 44000,
+      address: '2MyjESMWRjAWm9wJqr4tnVf9kD9sb1YcM2D',
+      amount: 10,
+      amountBtc: 44000,
       assetId: 'Ua4XPaYTew2DiFNmLT9YDAnvRGeYnsiY1UwV9j'
-    },
+    }
   ],
   rawMode: true
 }
@@ -813,6 +816,7 @@ describe('the send builder', function() {
       var sumValueOutputs = _.sumBy(tx.outs, function(output) {
         return output.value
       })
+      // prettier-ignore
       const expectedFee = (10 + (3 - 1)) + 148 * N + 2 * 34 + (9 + tx.outs[1].script.length)
       const fee = sumValueInputs - sumValueOutputs
       assert.equal(fee, expectedFee)
@@ -854,7 +858,7 @@ describe('the send builder', function() {
         return output.value
       })
       var fee = sumValueInputs - sumValueOutputs
-      const weight = 42+(364+271)+(128+36+tx.outs[1].script.length*4+124)
+      const weight = 42 + (364 + 271) + (128 + 36 + tx.outs[1].script.length * 4 + 124)
       var feePerKb = fee / (weight / 4000)
       testFeePerKb(feePerKb, 1000)
     })
@@ -961,22 +965,34 @@ describe('the send builder', function() {
     it('does not accept fee parameter', async function() {
       var args = clone(sendRawModeArgs)
       args.fee = 5000
-      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and fee are incompatible options/)
+      await assertThrowsAsync(
+        async () => await ccb.buildSendTransaction(args),
+        /rawMode and fee are incompatible options/
+      )
     })
     it('does not accept feePerKb parameter', async function() {
       var args = clone(sendRawModeArgs)
       args.feePerKb = 5000
-      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and feePerKb are incompatible options/)
+      await assertThrowsAsync(
+        async () => await ccb.buildSendTransaction(args),
+        /rawMode and feePerKb are incompatible options/
+      )
     })
     it('does not accept changeAddress parameter', async function() {
       var args = clone(sendRawModeArgs)
-      args.changeAddress = "n3uTa2Hfa8BVXfhFVu6MwchmjEGFBDgrMi"
-      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and changeAddress are incompatible options/)
+      args.changeAddress = 'n3uTa2Hfa8BVXfhFVu6MwchmjEGFBDgrMi'
+      await assertThrowsAsync(
+        async () => await ccb.buildSendTransaction(args),
+        /rawMode and changeAddress are incompatible options/
+      )
     })
     it('does not accept changeAddressBtc parameter', async function() {
       var args = clone(sendRawModeArgs)
-      args.changeAddressBtc = "n3uTa2Hfa8BVXfhFVu6MwchmjEGFBDgrMi"
-      await assertThrowsAsync(async () => await ccb.buildSendTransaction(args), /rawMode and changeAddressBtc are incompatible options/)
+      args.changeAddressBtc = 'n3uTa2Hfa8BVXfhFVu6MwchmjEGFBDgrMi'
+      await assertThrowsAsync(
+        async () => await ccb.buildSendTransaction(args),
+        /rawMode and changeAddressBtc are incompatible options/
+      )
     })
     it('uses all the inputs', async function() {
       // even if it is not needed
@@ -1115,7 +1131,7 @@ var amountsArgs = {
     8581193644,
     31464035471091,
     753539955007961,
-    149197981660432,
+    149197981660432
   ]
 }
 
@@ -1124,14 +1140,14 @@ describe('opReturnLimit', async function() {
     await assertThrowsAsync(async () => await ccb.opReturnLimit({}), /Must have "amounts"/)
   })
   it('works with 0 amounts', async function() {
-    const args = {amounts: []}
+    const args = { amounts: [] }
     const n = await ccb.opReturnLimit(args)
     assert.equal(n, 0)
   })
-  it('it is consistent with its own results', async function () {
+  it('it is consistent with its own results', async function() {
     var maxN = -1
     const amounts = amountsArgs.amounts
-    for(var i=0 ; i<amounts.length ; i++) {
+    for (var i = 0; i < amounts.length; i++) {
       const args = { amounts: amounts.slice(0, i) }
       const n = await ccb.opReturnLimit(args)
       assert(n >= maxN)
@@ -1140,7 +1156,7 @@ describe('opReturnLimit', async function() {
   })
   it('works with smallest amounts', async function() {
     var amounts = []
-    for(var i=0 ; i<100 ; i++) {
+    for (var i = 0; i < 100; i++) {
       amounts.push(1)
     }
     const args = { amounts: amounts }
@@ -1149,7 +1165,7 @@ describe('opReturnLimit', async function() {
   })
   it('works with big amounts', async function() {
     var amounts = []
-    for(var i=0 ; i<100 ; i++) {
+    for (var i = 0; i < 100; i++) {
       amounts.push(1111111111111111)
     }
     const args = { amounts: amounts }
@@ -1166,10 +1182,7 @@ describe('addresses conversion', function() {
   })
   it('raises error on invalid bitcoin address', async function() {
     const bitcoin = 'inv1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
-    await assertThrowsAsync(
-      async () => await ccb.toAssetBech32Address(bitcoin),
-      /Invalid bitcoin address/
-    )
+    await assertThrowsAsync(async () => await ccb.toAssetBech32Address(bitcoin), /Invalid bitcoin address/)
   })
   it('converts valid asset address to bitcoin address', async function() {
     const asset = 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89'
@@ -1178,9 +1191,6 @@ describe('addresses conversion', function() {
   })
   it('raises error on invalid asset address', async function() {
     const asset = 'sac1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
-    await assertThrowsAsync(
-      async () => await ccb.toBitcoinBech32Address(asset),
-      /Invalid asset address/
-    )
+    await assertThrowsAsync(async () => await ccb.toBitcoinBech32Address(asset), /Invalid asset address/)
   })
 })
