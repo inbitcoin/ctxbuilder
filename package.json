@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "./node_modules/.bin/mocha",
-    "prettier": "./node_modules/.bin/prettier --write **/*.js"
+    "prettier": "./node_modules/.bin/prettier --write **/*.js **/*.ts **/*.json"
   },
   "author": "oleiba",
   "license": "Apache-2.0",
@@ -30,8 +30,15 @@
   },
   "devDependencies": {
     "clone": "^2.1.1",
+    "husky": "^4.2.5",
     "mocha": "^6.1.4",
     "prettier": "^1.19.1",
+    "pretty-quick": "^2.0.1",
     "standard": "^10.0.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged --no-restage --bail --pattern \"**/*.ts\" --pattern \"**/*.js\" --pattern \"**/*.json\""
+    }
   }
 }
