@@ -147,9 +147,17 @@ ColoredCoinsBuilder.prototype.buildIssueTransaction = async function(args) {
   args.divisibility = args.divisibility || 0
   args.aggregationPolicy = args.aggregationPolicy || 'aggregatable'
 
-  var txb = new bitcoinjs.TransactionBuilder(
-    self.network === 'testnet' ? bitcoinjs.networks.testnet : bitcoinjs.networks.bitcoin
-  )
+  let networkObj
+  if (self.network === 'testnet') {
+    networkObj = bitcoinjs.networks.testnet
+  } else if (self.network === 'regtest') {
+    networkObj = _.clone(bitcoinjs.networks.testnet)
+    networkObj.bech32 = 'bcrt'
+  } else {
+    networkObj = bitcoinjs.networks.bitcoin
+  }
+  var txb = new bitcoinjs.TransactionBuilder(networkObj)
+
   // find inputs to cover the issuance
   var ccArgs = self._addInputsForIssueTransaction(txb, args)
   if (!ccArgs.success) {

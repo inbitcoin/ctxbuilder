@@ -100,6 +100,24 @@ describe('the issue builder', function() {
     assert.equal(ccTransaction.aggregationPolicy, 'aggregatable')
   })
 
+  it('return a response with bech32 testnet addresses', async function() {
+    var args = clone(issueArgs)
+    const address = 'tb1qfq8nlz3sda3vcqu5m6w0qfu0uxgu699lteuw8p'
+    args.issueAddress = address
+    args.utxos[0].scriptPubKey.addresses[0] = address
+    var result = await ccb.buildIssueTransaction(args)
+    assert(result.txHex)
+  })
+
+  it('return a response with bech32 regtest addresses', async function() {
+    var args = clone(issueArgs)
+    const address = 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd'
+    args.issueAddress = address
+    args.utxos[0].scriptPubKey.addresses[0] = address
+    var result = await regCcb.buildIssueTransaction(args)
+    assert(result.txHex)
+  })
+
   it('on injectPreviousOutput returns previous output hex in inputs', async function() {
     var args = clone(issueArgs)
     args.flags = { injectPreviousOutput: true }
