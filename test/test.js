@@ -1209,4 +1209,38 @@ describe('addresses', function() {
       })
     })
   })
+  describe('validity', function() {
+    describe('asset', function() {
+      it('success', function() {
+        const address = 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89'
+        assert(ccb.isValidAssetBech32Address(address))
+      })
+      it('error', function() {
+        const address = 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5XXX'
+        assert(!ccb.isValidAssetBech32Address(address))
+      })
+    })
+    describe('bitcoin', function() {
+      describe('testnet', function() {
+        it('success', function() {
+          const address = 'tb1qfq8nlz3sda3vcqu5m6w0qfu0uxgu699lteuw8p'
+          assert(ccb.isValidBitcoinBech32Address(address))
+        })
+        it('error', function() {
+          const address = 'tb1qfq8nlz3sda3vcqu5m6w0qfu0uxgu699lteuXXX'
+          assert(!ccb.isValidBitcoinBech32Address(address))
+        })
+      })
+      describe('regtest', function() {
+        it('success', function() {
+          const address = 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd'
+          assert(regCcb.isValidBitcoinBech32Address(address))
+        })
+        it('error', function() {
+          const address = 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhdXXX'
+          assert(!regCcb.isValidBitcoinBech32Address(address))
+        })
+      })
+    })
+  })
 })
