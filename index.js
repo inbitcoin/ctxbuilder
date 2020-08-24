@@ -44,9 +44,10 @@ var ColoredCoinsBuilder = function(properties) {
   if (
     typeof properties.network !== 'undefined' &&
     properties.network !== 'testnet' &&
+    properties.network !== 'regtest' &&
     properties.network !== 'mainnet'
   ) {
-    throw new Error('"network" must be either "testnet" or "mainnet"')
+    throw new Error('"network" must be either "mainnet", "testnet" or "regtest"')
   }
   if (properties.mindustvaluemultisig) {
     throw new Error('Some properties are not supported anymore')
@@ -1121,13 +1122,14 @@ ColoredCoinsBuilder.prototype.opReturnLimit = async function(args) {
 ColoredCoinsBuilder.prototype._getHrp = function() {
   var self = this
   if (!self.assetAddressHrp) throw new Error('HRP is not defined')
-  if (self.network == 'testnet') return 't' + self.assetAddressHrp
+  if (self.network !== 'mainnet') return 't' + self.assetAddressHrp
   else return self.assetAddressHrp
 }
 
 ColoredCoinsBuilder.prototype._getBtcHrp = function() {
   var self = this
   if (self.network === 'testnet') return 'tb'
+  if (self.network === 'regtest') return 'bcrt'
   else return 'bc'
 }
 

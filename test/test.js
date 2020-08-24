@@ -2,6 +2,8 @@
 var softMaxWalletUtxos = 3
 var ColoredCoinsBuilder = require('..')
 var ccb = new ColoredCoinsBuilder({ network: 'testnet', softMaxUtxos: softMaxWalletUtxos, assetAddressHrp: 'sac' })
+var regCcb = new ColoredCoinsBuilder({ network: 'regtest', softMaxUtxos: softMaxWalletUtxos, assetAddressHrp: 'sac' })
+
 var assert = require('assert')
 var clone = require('clone')
 var bitcoinjs = require('bitcoinjs-lib')
@@ -1192,5 +1194,17 @@ describe('addresses conversion', function() {
   it('raises error on invalid asset address', async function() {
     const asset = 'sac1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
     await assertThrowsAsync(async () => await ccb.toBitcoinBech32Address(asset), /Invalid asset address/)
+  })
+  describe('on regtest', function() {
+    it('converts valid bitcoin address to asset address', async function() {
+      const bitcoin = 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd'
+      const asset = regCcb.toAssetBech32Address(bitcoin)
+      assert.equal(asset, 'tsac1q9apxm7m0xdf4g455fr66a773vg78sa0kzc5vaq')
+    })
+    it('converts valid asset address to bitcoin address', async function() {
+      const asset = 'tsac1q9apxm7m0xdf4g455fr66a773vg78sa0kzc5vaq'
+      const bitcoin = regCcb.toBitcoinBech32Address(asset)
+      assert.equal(bitcoin, 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd')
+    })
   })
 })
