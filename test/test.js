@@ -1176,35 +1176,37 @@ describe('opReturnLimit', async function() {
   })
 })
 
-describe('addresses conversion', function() {
-  it('converts valid bitcoin address to asset address', async function() {
-    const bitcoin = 'tb1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
-    const asset = ccb.toAssetBech32Address(bitcoin)
-    assert.equal(asset, 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89')
-  })
-  it('raises error on invalid bitcoin address', async function() {
-    const bitcoin = 'inv1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
-    await assertThrowsAsync(async () => await ccb.toAssetBech32Address(bitcoin), /Invalid bitcoin address/)
-  })
-  it('converts valid asset address to bitcoin address', async function() {
-    const asset = 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89'
-    const bitcoin = ccb.toBitcoinBech32Address(asset)
-    assert.equal(bitcoin, 'tb1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p')
-  })
-  it('raises error on invalid asset address', async function() {
-    const asset = 'sac1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
-    await assertThrowsAsync(async () => await ccb.toBitcoinBech32Address(asset), /Invalid asset address/)
-  })
-  describe('on regtest', function() {
+describe('addresses', function() {
+  describe('conversion', function() {
     it('converts valid bitcoin address to asset address', async function() {
-      const bitcoin = 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd'
-      const asset = regCcb.toAssetBech32Address(bitcoin)
-      assert.equal(asset, 'tsac1q9apxm7m0xdf4g455fr66a773vg78sa0kzc5vaq')
+      const bitcoin = 'tb1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
+      const asset = ccb.toAssetBech32Address(bitcoin)
+      assert.equal(asset, 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89')
+    })
+    it('raises error on invalid bitcoin address', async function() {
+      const bitcoin = 'inv1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
+      await assertThrowsAsync(async () => await ccb.toAssetBech32Address(bitcoin), /Invalid bitcoin address/)
     })
     it('converts valid asset address to bitcoin address', async function() {
-      const asset = 'tsac1q9apxm7m0xdf4g455fr66a773vg78sa0kzc5vaq'
-      const bitcoin = regCcb.toBitcoinBech32Address(asset)
-      assert.equal(bitcoin, 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd')
+      const asset = 'tsac1qslqmsaue588j8v5dkazq2cu548dzxg7rsy5c89'
+      const bitcoin = ccb.toBitcoinBech32Address(asset)
+      assert.equal(bitcoin, 'tb1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p')
+    })
+    it('raises error on invalid asset address', async function() {
+      const asset = 'sac1qslqmsaue588j8v5dkazq2cu548dzxg7raz587p'
+      await assertThrowsAsync(async () => await ccb.toBitcoinBech32Address(asset), /Invalid asset address/)
+    })
+    describe('on regtest', function() {
+      it('converts valid bitcoin address to asset address', async function() {
+        const bitcoin = 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd'
+        const asset = regCcb.toAssetBech32Address(bitcoin)
+        assert.equal(asset, 'tsac1q9apxm7m0xdf4g455fr66a773vg78sa0kzc5vaq')
+      })
+      it('converts valid asset address to bitcoin address', async function() {
+        const asset = 'tsac1q9apxm7m0xdf4g455fr66a773vg78sa0kzc5vaq'
+        const bitcoin = regCcb.toBitcoinBech32Address(asset)
+        assert.equal(bitcoin, 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd')
+      })
     })
   })
 })
