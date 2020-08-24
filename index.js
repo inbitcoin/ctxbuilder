@@ -509,9 +509,16 @@ ColoredCoinsBuilder.prototype.buildSendTransaction = async function(args) {
     args.fee = parseInt(args.fee)
   }
 
-  var txb = new bitcoinjs.TransactionBuilder(
-    self.network === 'testnet' ? bitcoinjs.networks.testnet : bitcoinjs.networks.bitcoin
-  )
+  let networkObj
+  if (self.network === 'testnet') {
+    networkObj = bitcoinjs.networks.testnet
+  } else if (self.network === 'regtest') {
+    networkObj = _.clone(bitcoinjs.networks.testnet)
+    networkObj.bech32 = 'bcrt'
+  } else {
+    networkObj = bitcoinjs.networks.bitcoin
+  }
+  var txb = new bitcoinjs.TransactionBuilder(networkObj)
 
   if (args.rawMode)
     return self._buildRawModeSendTransaction(txb, args)

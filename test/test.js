@@ -313,6 +313,26 @@ describe('the send builder', function() {
     assert.equal(ccTransaction.payments[0].amount, sendArgs.to[0].amount)
   })
 
+  it('return a response with bech32 testnet addresses', async function() {
+    var args = clone(sendArgs)
+    const address = 'tb1qfq8nlz3sda3vcqu5m6w0qfu0uxgu699lteuw8p'
+    args.to[0].address = address
+    args.changeAddress = address
+    args.utxos[0].scriptPubKey.addresses[0] = address
+    var result = await ccb.buildSendTransaction(args)
+    assert(result.txHex)
+  })
+
+  it('return a response with bech32 regtest addresses', async function() {
+    var args = clone(sendArgs)
+    const address = 'bcrt1q9apxm7m0xdf4g455fr66a773vg78sa0kdhd7nd'
+    args.to[0].address = address
+    args.changeAddress = address
+    args.utxos[0].scriptPubKey.addresses[0] = address
+    var result = await regCcb.buildSendTransaction(args)
+    assert(result.txHex)
+  })
+
   it('returns valid response with several outputs', async function() {
     var addresses = [
       'mtr98kany9G1XYNU74pRnfBQmaCg2FZLmc',
